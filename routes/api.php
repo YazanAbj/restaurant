@@ -25,3 +25,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('menu-items', [MenuItemController::class, 'index']);
+    Route::get('menu-items/{id}', [MenuItemController::class, 'show']);
+    Route::post('menu-items', [MenuItemController::class, 'store']);
+    Route::post('menu-items/{id}/update', [MenuItemController::class, 'update']);
+    Route::delete('menu-items/{id}', [MenuItemController::class, 'destroy']);
+});

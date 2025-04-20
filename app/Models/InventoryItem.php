@@ -17,4 +17,14 @@ class InventoryItem extends Model
         'received_date',
         'expiry_date',
     ];
+
+
+    public function menuItems()
+{
+    return $this->belongsToMany(MenuItem::class, 'menu_item_requirements')
+                ->withPivot('quantity')
+                ->withTimestamps();
+}
+
+
 }
