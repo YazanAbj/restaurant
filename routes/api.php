@@ -8,7 +8,6 @@ use App\Http\Controllers\ReservationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::apiResource('inventory', InventoryItemController::class)->middleware('auth:sanctum');
 Route::apiResource('menu', MenuItemController::class)->middleware('auth:sanctum');
 Route::apiResource('reservations', ReservationController::class)->middleware('auth:sanctum');
 
@@ -20,6 +19,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-// Auth routes should be outside the sanctum middleware
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('inventory-items', InventoryItemController::class);
+});
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
