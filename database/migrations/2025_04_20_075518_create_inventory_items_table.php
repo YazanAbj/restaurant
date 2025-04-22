@@ -15,12 +15,15 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('description')->nullable();
+            $table->string( 'category');
             $table->integer('quantity');
             $table->string('unit');
             $table->decimal('price_per_unit', 8, 2);
             $table->string('supplier_name');
             $table->date('received_date');
             $table->date('expiry_date')->nullable();
+            $table->boolean('low_stock')->default(false);
+            $table->string('photo')->nullable();
             $table->timestamps();
         });
     }

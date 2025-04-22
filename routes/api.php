@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\Manager\InventoryController;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\InventoryItemController;
@@ -42,15 +43,32 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('inventory-items', InventoryItemController::class);
-});
-
-
-
-Route::middleware('auth:sanctum')->group(function () {
     Route::get('menu-items', [MenuItemController::class, 'index']);
     Route::get('menu-items/{id}', [MenuItemController::class, 'show']);
     Route::post('menu-items', [MenuItemController::class, 'store']);
     Route::post('menu-items/{id}/update', [MenuItemController::class, 'update']);
     Route::delete('menu-items/{id}', [MenuItemController::class, 'destroy']);
 });
+
+
+///////////////////// manager ////////////////////////////////////
+
+
+Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [InventoryController::class, 'index']);
+    Route::post('/', [InventoryController::class, 'store']);
+    Route::get('/{id}', [InventoryController::class, 'show']);
+    Route::post('/{id}', [InventoryController::class, 'update']);
+    Route::delete('/{id}', [InventoryController::class, 'destroy']);
+    Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
+});
+
+
+
+
+
+
+
+
+///////////////////// manager end ////////////////////////////////////
+
