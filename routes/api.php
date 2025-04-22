@@ -10,6 +10,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\TableController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\IsManager;
 
 
 
@@ -55,7 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
 ///////////////////// manager ////////////////////////////////////
 
 
-Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum',IsManager::class)->group(function () {
     Route::get('/', [InventoryController::class, 'index']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::get('/{id}', [InventoryController::class, 'show']);
@@ -64,7 +65,7 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->m
     Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
 });
 
-Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum',IsManager::class)->group(function () {
     Route::get('/', [MenuController::class, 'index']);
     Route::post('/', [MenuController::class, 'store']);
     Route::get('/{id}', [MenuController::class, 'show']);
