@@ -24,6 +24,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    public function isManager(): bool
+    {
+        return $this->user_role === 'manager';
+    }
+
     public function reservations()
     {
         return $this->hasMany(Reservation::class);

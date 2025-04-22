@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Manager;
 
-use App\Models\Reservation;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Reservation;
 use App\Models\Table;
 
 class TableController extends Controller

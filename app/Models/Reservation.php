@@ -38,6 +38,7 @@ class Reservation extends Model
             ->orderBy('reservation_date')
             ->orderBy('reservation_time');
     }
+
     public static function isTableAvailable($tableId, $date, $start, $end, $excludeReservationId = null)
     {
         return !Reservation::where('table_id', $tableId)
@@ -54,6 +55,7 @@ class Reservation extends Model
             })
             ->exists();
     }
+
     public function table()
     {
         return $this->belongsTo(Table::class);
