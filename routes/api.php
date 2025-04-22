@@ -56,6 +56,8 @@ Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->midd
     Route::get('/', [App\Http\Controllers\Manager\TableController::class, 'index']);
     Route::post('/', [App\Http\Controllers\Manager\TableController::class, 'store']);
     Route::post('/{id}', [App\Http\Controllers\Manager\TableController::class, 'update']);
+    Route::post('/{id}/status', [App\Http\Controllers\Manager\TableController::class, 'updateStatus']);
+    Route::get('/statuses', [App\Http\Controllers\Manager\TableController::class, 'getTablesByStatus']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
