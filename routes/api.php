@@ -3,6 +3,7 @@ use App\Http\Controllers\Manager\InventoryController;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\InventoryItemController;
+use App\Http\Controllers\Manager\MenuController;
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
@@ -63,7 +64,15 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->m
     Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
 });
 
+Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [MenuController::class, 'index']);
+    Route::post('/', [MenuController::class, 'store']);
+    Route::get('/{id}', [MenuController::class, 'show']);
+    Route::post('/{id}', [MenuController::class, 'update']);
+    Route::delete('/{id}', [MenuController::class, 'destroy']);
 
+
+});
 
 
 

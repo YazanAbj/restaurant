@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Manager;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\InventoryItem;
-use App\Models\Category;
 
 class InventoryController extends Controller
 {
