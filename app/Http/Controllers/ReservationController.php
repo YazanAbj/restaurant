@@ -29,6 +29,20 @@ class ReservationController extends Controller
             return response()->json(['message' => 'Guest number exceeds table capacity.'], 400);
         }
 
+
+        $existingReservation = Reservation::where('user_id', auth()->id())
+            ->where('table_id', $request->table_id)
+            ->where('reservation_date', $request->reservation_date)
+            ->where('reservation_start_time', $request->reservation_start_time)
+            ->where('reservation_end_time', $request->reservation_end_time)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existingReservation) {
+            return response()->json(['message' => 'You already have a pending reservation for this table and time.'], 409);
+        }
+
+
         if (!Reservation::isTableAvailable(
             $request->table_id,
             $request->reservation_date,
@@ -49,7 +63,7 @@ class ReservationController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Your Reservation Is Waiting for the confirmation,now its pending',
+            'message' => 'Your reservation is waiting for confirmation, now it\'s pending.',
             'data' => $reservation
         ], 201);
     }

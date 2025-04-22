@@ -15,10 +15,6 @@ class ReservationController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        if (auth()->user()->user_role !== 'manager') {
-            return response()->json(['message' => 'Unauthorized.'], 403);
-        }
-
         $request->validate([
             'reservation_date' => 'required|date|after_or_equal:today',
             'reservation_start_time' => 'required|date_format:H:i',
@@ -33,6 +29,19 @@ class ReservationController extends Controller
         if ($request->guest_number > $table->capacity) {
             return response()->json(['message' => 'Guest number exceeds table capacity.'], 400);
         }
+
+        $existingReservation = Reservation::where('user_id', auth()->id())
+            ->where('table_id', $request->table_id)
+            ->where('reservation_date', $request->reservation_date)
+            ->where('reservation_start_time', $request->reservation_start_time)
+            ->where('reservation_end_time', $request->reservation_end_time)
+            ->where('status', 'confirmedt')
+            ->first();
+
+        if ($existingReservation) {
+            return response()->json(['message' => 'You already have a reservation for this table and time.'], 409);
+        }
+
 
         if (!Reservation::isTableAvailable(
             $request->table_id,
@@ -51,7 +60,7 @@ class ReservationController extends Controller
             'reservation_end_time' => $request->reservation_end_time,
             'guest_number' => $request->guest_number,
             'notes' => $request->notes,
-            'status' => 'confirmed', // Directly set as confirmed
+            'status' => 'confirmed',
         ]);
 
         return response()->json([
@@ -128,25 +137,6 @@ class ReservationController extends Controller
         ], 200);
     }
 
-    public function cancel($id)
-    {
-        $reservation = Reservation::where('id', $id)
-            ->where('user_id', auth()->id())
-            ->first();
-
-        if (!$reservation) {
-            return response()->json(['message' => 'Reservation not found or unauthorized.'], 404);
-        }
-
-        if ($reservation->status === 'cancelled') {
-            return response()->json(['message' => 'This reservation is already cancelled.'], 400);
-        }
-
-        $reservation->status = 'cancelled';
-        $reservation->save();
-
-        return response()->json(['message' => 'Reservation cancelled successfully.']);
-    }
 
     public function index()
     {
@@ -170,5 +160,67 @@ class ReservationController extends Controller
             'message' => 'Reservation retrieved successfully.',
             'data' => $reservation
         ], 200);
+    }
+
+    public function accept($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        // Only accept if it's pending
+        if ($reservation->status !== 'pending') {
+            return response()->json(['message' => 'Reservation is already processed.'], 400);
+        }
+
+        // Mark this reservation as accepted
+        $reservation->status = 'confirmed';
+        $reservation->save();
+
+        // Cancel all overlapping pending reservations for the same table
+        Reservation::where('id', '!=', $reservation->id)
+            ->where('table_id', $reservation->table_id)
+            ->where('status', 'pending')
+            ->where('reservation_date', $reservation->reservation_date)
+            ->where(function ($query) use ($reservation) {
+                $query->whereBetween('reservation_start_time', [$reservation->reservation_start_time, $reservation->reservation_end_time])
+                    ->orWhereBetween('reservation_end_time', [$reservation->reservation_start_time, $reservation->reservation_end_time])
+                    ->orWhere(function ($query) use ($reservation) {
+                        $query->where('reservation_start_time', '<', $reservation->reservation_start_time)
+                            ->where('reservation_end_time', '>', $reservation->reservation_end_time);
+                    });
+            })
+            ->update(['status' => 'cancelled']);
+
+        return response()->json(['message' => 'Reservation confirmed and conflicting ones cancelled.']);
+    }
+
+    public function reject($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+
+        if ($reservation->status !== 'pending') {
+            return response()->json(['message' => 'Reservation is already processed.'], 400);
+        }
+
+        $reservation->status = 'cancelled';
+        $reservation->save();
+
+        return response()->json(['message' => 'Reservation rejected successfully.']);
+    }
+
+    public function cancel($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        if (in_array($reservation->status, ['cancelled'])) {
+            return response()->json([
+                'message' => "This reservation is already cancelled."
+            ], 400);
+        }
+
+        $reservation->status = 'cancelled';
+        $reservation->save();
+
+        return response()->json(['message' => 'Reservation cancelled by manager.']);
     }
 }

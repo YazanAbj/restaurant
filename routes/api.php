@@ -33,6 +33,8 @@ Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')
     Route::post('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'update']);
     Route::get('/', [App\Http\Controllers\Manager\ReservationController::class, 'index']);
     Route::get('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'show']);
+    Route::post('/{id}/accept', [App\Http\Controllers\Manager\ReservationController::class, 'accept']);
+    Route::post('/{id}/reject', [App\Http\Controllers\Manager\ReservationController::class, 'reject']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
