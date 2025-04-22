@@ -5,11 +5,12 @@ use App\Http\Controllers\Manager\InventoryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\InventoryItemController;
 use App\Http\Controllers\Manager\MenuController;
+use App\Http\Controllers\Manager\OrderController;
+
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\TableController;
-use App\Http\Controllers\OrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\IsManager;
@@ -91,11 +92,14 @@ Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middle
     Route::delete('/{id}', [MenuController::class, 'destroy']);
 });
 
-
-///////////////////// manager end ////////////////////////////////////
-Route::prefix('orders')->group(function () {
-    Route::post('/start', [OrderController::class, 'startOrder']); // create order
-    Route::post('/{order}/add-items', [OrderController::class, 'addItem']); // add items
-    Route::post('/{order}/send', [OrderController::class, 'sendToChef']); // send to chef
-    Route::get('/kitchen', [OrderController::class, 'kitchenOrders']); // kitchen view
+Route::prefix('manager/order')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+    Route::get('/', [OrderController::class, 'index']);
+    Route::post('/', [OrderController::class, 'store']);
+    Route::get('/{id}', [OrderController::class, 'show']);
+    Route::put('/{id}', [OrderController::class, 'update']);
+    Route::delete('/{id}', [OrderController::class, 'destroy']);
+    Route::post('/{id}/discount', [OrderController::class, 'applyDiscount']);
 });
+
+
+
