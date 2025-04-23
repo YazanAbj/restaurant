@@ -14,6 +14,7 @@ class Order extends Model
         'total_price',
         'status',
         'ordered_at',
+        'bill_id',
     ];
 
     public function items()
@@ -25,4 +26,9 @@ class Order extends Model
     {
         return $this->belongsTo(Table::class);
     }
+    public function bill()
+    {
+    return $this->belongsTo(Bill::class);
+    }
+
 }

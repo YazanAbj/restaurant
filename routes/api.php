@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\InventoryItemController;
 use App\Http\Controllers\Manager\MenuController;
 use App\Http\Controllers\Manager\OrderController;
+use App\Http\Controllers\Manager\BillController;
 
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\ReportController;
@@ -100,6 +101,12 @@ Route::prefix('manager/order')->namespace('App\Http\Controllers\Manager')->middl
     Route::delete('/{id}', [OrderController::class, 'destroy']);
     Route::post('/{id}/discount', [OrderController::class, 'applyDiscount']);
 });
+
+
+Route::prefix('manager/bill')->namespace('App\Http\Controllers\Manager') ->middleware('auth:sanctum', IsManager::class)->group(function () {
+        Route::get('/{id}', [BillController::class, 'show']);
+        Route::post('/{id}/discount', [BillController::class, 'applyDiscount']);
+    });
 
 
 
