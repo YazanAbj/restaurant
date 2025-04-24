@@ -38,7 +38,7 @@ class OrderService
                     'table_number' => $tableNumber,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price,
+                    'price' => $price * $item['quantity'],
                     'status' => 'preparing',
                 ]);
             }
@@ -71,7 +71,7 @@ class OrderService
                     'table_number' => $order->table_number,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price,
+                    'price' => $price * $item['quantity'],
                     'status' => 'preparing',
                 ]);
             }
@@ -130,7 +130,7 @@ class OrderService
             $orderItem->update([
                 'menu_item_id' => $newMenuItemId,
                 'quantity' => $newQuantity,
-                'price' => $newPrice,
+                'price' => $newPrice * $newQuantity,
             ]);
 
             // Recalculate order total
