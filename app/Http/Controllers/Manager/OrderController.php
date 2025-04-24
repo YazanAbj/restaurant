@@ -94,7 +94,19 @@ class OrderController extends Controller
     public function destroy($orderId)
     {
         $order = Order::findOrFail($orderId);
-        $order->delete(); // You may also delete related items manually or use cascade
+        $order->delete();
         return response()->json(['message' => 'Order deleted']);
+    }
+
+    public function cancelOrderItem($orderItemId)
+    {
+        $orderItem = $this->orderService->cancelOrderItem($orderItemId);
+        return response()->json(['message' => 'Order item canceled', 'order_item' => $orderItem]);
+    }
+
+    public function destroyOrderItem($orderItemId)
+    {
+        $this->orderService->deleteOrderItem($orderItemId);
+        return response()->json(['message' => 'Order item deleted successfully']);
     }
 }
