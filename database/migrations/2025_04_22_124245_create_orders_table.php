@@ -15,9 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('table_number');
             $table->decimal('total_price', 10, 2)->default(0);
-            $table->timestamp('ordered_at')->nullable();
             $table->foreignId('bill_id')->constrained()->onDelete('cascade');
-            $table->boolean('has_been_served')->default(false); // New column
+            $table->boolean('has_been_served')->default(false);
+            $table->boolean('is_canceled')->default(false);
+            $table->text('cancel_reason')->nullable();
             $table->timestamps();
         });
     }

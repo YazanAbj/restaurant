@@ -106,6 +106,19 @@ Route::post('/manager/bills/{bill}/close', [App\Http\Controllers\Manager\OrderCo
 
 
 
+
+Route::prefix('/manager/orders')->group(function () {
+    Route::get('/', [App\Http\Controllers\Manager\OrderController::class, 'index']);
+    Route::get('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'show']);
+    Route::post('/', [App\Http\Controllers\Manager\OrderController::class, 'store']);
+    Route::post('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'update']);
+    Route::delete('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'destroy']);
+    Route::put('/{order}/cancel', [App\Http\Controllers\Manager\OrderController::class, 'cancel']);
+    Route::put('/order-items/{orderItem}', [App\Http\Controllers\Manager\OrderController::class, 'updateOrderItem']);
+});
+
+
+
 ///////////////////// manager ////////////////////////////////////
 
 

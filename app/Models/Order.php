@@ -13,9 +13,9 @@ class Order extends Model
     protected $fillable = [
         'table_number',
         'total_price',
-        'ordered_at',
         'bill_id',
         'has_been_served',
+
     ];
 
 

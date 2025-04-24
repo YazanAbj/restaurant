@@ -17,8 +17,7 @@ return new class extends Migration
             $table->string('table_number');
             $table->foreignId('menu_item_id')->constrained()->onDelete('cascade');
             $table->integer('quantity');
-            $table->decimal('price', 8, 2);
-            $table->enum('status', ['preparing', 'finished'])->default('preparing'); // New column
+            $table->enum('status', ['preparing', 'finished', 'canceled'])->default('preparing');
             $table->timestamps();
         });
     }

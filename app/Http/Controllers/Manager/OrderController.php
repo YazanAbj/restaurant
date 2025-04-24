@@ -26,7 +26,6 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
         ]);
 
         $order = $this->orderService->createOrderWithItems(
@@ -41,5 +40,61 @@ class OrderController extends Controller
     {
         $bill = $this->orderService->closeBill($billId);
         return response()->json(['message' => 'Bill closed', 'bill' => $bill]);
+    }
+
+    public function update(Request $request, $orderId)
+    {
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        $order = $this->orderService->updateOrder($orderId, $validated['items']);
+        return response()->json(['order' => $order]);
+    }
+    public function updateOrderItem(Request $request, $orderItemId)
+    {
+        $validated = $request->validate([
+            'menu_item_id' => 'required|integer|exists:menu_items,id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $orderItem = $this->orderService->updateOrderItem(
+            $orderItemId,
+            $validated['menu_item_id'],
+            $validated['quantity']
+        );
+
+        return response()->json(['order_item' => $orderItem]);
+    }
+
+
+    public function index()
+    {
+        $orders = Order::with('items')->latest()->get();
+        return response()->json(['orders' => $orders]);
+    }
+
+    public function show($orderId)
+    {
+        $order = Order::with('items')->findOrFail($orderId);
+        return response()->json(['order' => $order]);
+    }
+
+    public function cancel(Request $request, $orderId)
+    {
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $order = $this->orderService->cancelOrder($orderId, $validated['reason'] ?? null);
+        return response()->json(['message' => 'Order canceled', 'order' => $order]);
+    }
+    public function destroy($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+        $order->delete(); // You may also delete related items manually or use cascade
+        return response()->json(['message' => 'Order deleted']);
     }
 }

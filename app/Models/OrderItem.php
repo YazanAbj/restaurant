@@ -14,7 +14,6 @@ class OrderItem extends Model
         'table_number',
         'menu_item_id',
         'quantity',
-        'price',
         'status',
     ];
 
