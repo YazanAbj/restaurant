@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\InventoryItemController;
 use App\Http\Controllers\Manager\MenuController;
 use App\Http\Controllers\Manager\OrderController;
+use App\Http\Controllers\Manager\BillController;
 
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\ReportController;
