@@ -119,6 +119,54 @@ class OrderService
         });
     }
 
+
+
+    public function cancelOrderItem($orderItemId)
+    {
+        return DB::transaction(function () use ($orderItemId) {
+            $orderItem = OrderItem::findOrFail($orderItemId);
+            $order = $orderItem->order;
+            $bill = $order->bill;
+
+            // Update item status
+            $orderItem->update(['status' => 'canceled']);
+
+            // Recalculate order total, excluding canceled items
+            $orderTotal = $order->items()
+                ->where('status', '!=', 'canceled')
+                ->sum(DB::raw('price * quantity'));
+
+            $order->update(['total_price' => $orderTotal]);
+
+            // Recalculate bill total (excluding canceled orders)
+            $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
+            $bill->update(['total' => $billTotal]);
+
+            return $orderItem->fresh();
+        });
+    }
+
+    public function deleteOrderItem($orderItemId)
+    {
+        return DB::transaction(function () use ($orderItemId) {
+            $orderItem = OrderItem::findOrFail($orderItemId);
+            $order = $orderItem->order;
+            $bill = $order->bill;
+
+            $orderItem->delete();
+
+            // Recalculate order total
+            $orderTotal = $order->items()->sum(DB::raw('price * quantity'));
+            $order->update(['total_price' => $orderTotal]);
+
+            // Recalculate bill total (excluding canceled orders)
+            $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
+            $bill->update(['total' => $billTotal]);
+
+            return true;
+        });
+    }
+
     public function closeBill($billId, $discount = 0)
     {
         return DB::transaction(function () use ($billId, $discount) {

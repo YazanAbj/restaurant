@@ -115,6 +115,8 @@ Route::prefix('/manager/orders')->group(function () {
     Route::delete('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'destroy']);
     Route::put('/{order}/cancel', [App\Http\Controllers\Manager\OrderController::class, 'cancel']);
     Route::put('/order-items/{orderItem}', [App\Http\Controllers\Manager\OrderController::class, 'updateOrderItem']);
+    Route::delete('/order-items/{orderItemId}', [App\Http\Controllers\Manager\OrderController::class, 'destroyOrderItem']);
+    Route::patch('/order-items/{orderItemId}/cancel', [App\Http\Controllers\Manager\OrderController::class, 'cancelOrderItem']);
 });
 
 
