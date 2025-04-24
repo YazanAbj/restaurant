@@ -13,24 +13,31 @@ class OrderService
     public function createOrderWithItems($tableNumber, $items)
     {
         return DB::transaction(function () use ($tableNumber, $items) {
-            // Find or create an open Bill
-            $bill = Bill::firstOrCreate(
-                ['table_number' => $tableNumber, 'status' => 'open'],
-                ['total' => 0]
-            );
+            // Check if an open bill already exists
+            $bill = Bill::where('table_number', $tableNumber)
+                        ->where('status', 'open')
+                        ->first();
 
-            // Create a new Order under this Bill
+            $totalOrderPrice = 0;
+
+            if (!$bill) {
+                // If no open bill, create one
+                $bill = Bill::create([
+                    'table_number' => $tableNumber,
+                    'status' => 'open',
+                    'total' => 0,
+                    'final_price' => 0,
+                ]);
+            }
+
+            // Create a new order under this bill
             $order = $bill->orders()->create([
                 'table_number' => $tableNumber,
             ]);
 
-            $totalOrderPrice = 0;
-
             foreach ($items as $item) {
-
                 $menuItem = MenuItem::findOrFail($item['menu_item_id']);
                 $price = $menuItem->price;
-
                 $total = $price * $item['quantity'];
                 $totalOrderPrice += $total;
 
@@ -38,16 +45,23 @@ class OrderService
                     'table_number' => $tableNumber,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price * $item['quantity'],
+                    'price' => $total,
                     'status' => 'preparing',
                 ]);
             }
 
-
-
             // Update order total and bill total
             $order->update(['total_price' => $totalOrderPrice]);
-            $bill->update(['total' => $bill->total + $totalOrderPrice]);
+            
+            $bill->total += $totalOrderPrice;
+            $bill->final_price += $totalOrderPrice;
+
+            // Set final_price only if this is the first order
+            if ($bill->final_price == 0) {
+                $bill->final_price = $bill->total;
+            }
+
+            $bill->save();
 
             return $order->load('items');
         });
@@ -57,7 +71,7 @@ class OrderService
     {
         return DB::transaction(function () use ($orderId, $items) {
             $order = Order::findOrFail($orderId);
-            $order->items()->delete(); // Remove existing items
+            $order->items()->delete();
 
             $totalOrderPrice = 0;
 
@@ -71,31 +85,32 @@ class OrderService
                     'table_number' => $order->table_number,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price * $item['quantity'],
+                    'price' => $total,
                     'status' => 'preparing',
                 ]);
             }
 
             $order->update(['total_price' => $totalOrderPrice]);
-            $order->bill->update(['total' => $order->bill->orders()->sum('total_price')]);
+            $order->bill->update([
+                'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
+            ]);
 
             return $order->load('items');
         });
     }
+
     public function cancelOrder($orderId, $reason = null)
     {
         return DB::transaction(function () use ($orderId, $reason) {
             $order = Order::findOrFail($orderId);
 
-            // Mark order as canceled
-            $order->is_canceled = true;
-            $order->cancel_reason = $reason;
-            $order->save();
+            $order->update([
+                'is_canceled' => true,
+                'cancel_reason' => $reason
+            ]);
 
-            // Update all items of this order to canceled
             $order->items()->update(['status' => 'canceled']);
 
-            // Update the bill total (exclude canceled orders)
             $order->bill->update([
                 'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
             ]);
@@ -106,13 +121,19 @@ class OrderService
 
     public function closeBill($billId, $discount = 0)
     {
-        $bill = Bill::findOrFail($billId);
-        $finalTotal = $bill->total - $discount;
-        $bill->update([
-            'total' => max($finalTotal, 0),
-            'status' => 'paid'
-        ]);
-        return $bill;
+        return DB::transaction(function () use ($billId, $discount) {
+            $bill = Bill::findOrFail($billId);
+
+            // Final price is already set when the bill is created
+            $discountedTotal = max($bill->total - $discount, 0);
+
+            $bill->update([
+                'total' => $discountedTotal,
+                'status' => 'paid',
+            ]);
+
+            return $bill;
+        });
     }
 
     public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity)
@@ -126,18 +147,15 @@ class OrderService
             $newPrice = $menuItem->price;
             $newTotal = $newPrice * $newQuantity;
 
-            // Update the item
             $orderItem->update([
                 'menu_item_id' => $newMenuItemId,
                 'quantity' => $newQuantity,
-                'price' => $newPrice * $newQuantity,
+                'price' => $newTotal,
             ]);
 
-            // Recalculate order total
-            $orderTotal = $order->items()->sum(DB::raw('price * quantity'));
+            $orderTotal = $order->items()->sum(DB::raw('price'));
             $order->update(['total_price' => $orderTotal]);
 
-            // Recalculate bill total (excluding canceled orders)
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal]);
 

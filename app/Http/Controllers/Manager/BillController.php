@@ -8,43 +8,53 @@ use Illuminate\Http\Request;
 
 class BillController extends Controller
 {
-    public function showOpenBill($tableNumber)
+    // ✅ Show all bills
+    public function index()
     {
-        $bill = Bill::where('table_number', $tableNumber)
-            ->where('status', 'open')
-            ->with('orders.orderItems')
-            ->first();
+        return response()->json(Bill::with('orders.Items')->get());
+    }
 
-        if (!$bill) {
-            return response()->json(['message' => 'No open bill found.'], 404);
+    // ✅ Show all open or closed bills
+    public function filterByStatus($status)
+    {
+        if (!in_array($status, ['open', 'paid'])) {
+            return response()->json(['message' => 'Invalid status.'], 400);
         }
 
-        return response()->json($bill);
+        $bills = Bill::where('status', $status)->with('orders.Items')->get();
+        return response()->json($bills);
     }
 
+    // ✅ Show a single bill
     public function show(Bill $bill)
     {
-        $bill->load('orders.orderItems');
+        $bill->load('orders.Items');
         return response()->json($bill);
     }
 
-    public function closeBill(Bill $bill)
-    {
-        $bill->status = 'paid';
-        $bill->save();
-
-        return response()->json(['message' => 'Bill closed successfully.']);
-    }
-
+    // ✅ Apply discount
     public function applyDiscount(Request $request, Bill $bill)
     {
         $request->validate([
-            'discount' => 'required|numeric|min:0|max:' . $bill->total,
+            'discount_type' => 'required|in:fixed,percentage',
+            'discount_value' => 'required|numeric|min:0',
         ]);
 
-        $bill->total -= $request->discount;
-        $bill->save();
+        $bill->discount_type = $request->discount_type;
+        $bill->discount_value = $request->discount_value;
+        $bill->applyDiscount()->save();
 
-        return response()->json(['message' => 'Discount applied.', 'total' => $bill->total]);
+        return response()->json([
+            'message' => 'Discount applied successfully.',
+            'final_price' => $bill->final_price,
+            'discount_amount' => $bill->discount_amount,
+        ]);
+    }
+
+    // ✅ Delete a bill
+    public function destroy(Bill $bill)
+    {
+        $bill->delete();
+        return response()->json(['message' => 'Bill deleted successfully.']);
     }
 }

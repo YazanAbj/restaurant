@@ -130,11 +130,14 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->m
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
     Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
 });
+ 
 
-Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
-    Route::get('/', [MenuController::class, 'index']);
-    Route::post('/', [MenuController::class, 'store']);
-    Route::get('/{id}', [MenuController::class, 'show']);
-    Route::post('/{id}', [MenuController::class, 'update']);
-    Route::delete('/{id}', [MenuController::class, 'destroy']);
-});
+
+Route::prefix('manager/bills') ->namespace('App\Http\Controllers\Manager')  ->group(function () {
+        Route::get('/', [App\Http\Controllers\Manager\BillController::class, 'index']);                         
+        Route::get('/status/{status}', [App\Http\Controllers\Manager\BillController::class, 'filterByStatus']); 
+        Route::get('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'show']);                   
+        Route::post('/{bill}/discount', [App\Http\Controllers\Manager\BillController::class, 'applyDiscount']); 
+        Route::delete('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'destroy']);              
+    });
+

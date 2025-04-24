@@ -15,7 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('table_number');
             $table->decimal('total', 10, 2)->default(0);
-            $table->enum('status', ['open', 'paid'])->default('open'); // New column
+            $table->enum('discount_type', ['percentage', 'fixed'])->nullable(); // Discount type
+            $table->decimal('discount_value', 10, 2)->nullable();               // Value of discount
+            $table->decimal('discount_amount', 10, 2)->nullable();              // Amount after calculation
+            $table->decimal('final_price', 10, 2)->nullable();                  // Total after discount
+            $table->enum('status', ['open', 'paid'])->default('open');
             $table->timestamps();
         });
     }
