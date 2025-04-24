@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,20 +10,21 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
-        'customer_name',
-        'table_id',
+        'table_number',
         'total_price',
-        'status',
         'ordered_at',
+        'bill_id',
+        'has_been_served',
     ];
+
+
+    public function bill()
+    {
+        return $this->belongsTo(Bill::class);
+    }
 
     public function items()
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    public function table()
-    {
-        return $this->belongsTo(Table::class);
     }
 }

@@ -72,6 +72,39 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
+// Route::prefix('manager/bill')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+//     Route::get('/{id}', [App\Http\Controllers\Manager\BillController::class, 'show']); // View bill details
+//     Route::get('/open/{table_number}', [App\Http\Controllers\Manager\BillController::class, 'showOpenBill']); // View open bill by table number
+//     Route::put('/{id}/close', [App\Http\Controllers\Manager\BillController::class, 'closeBill']); // Close the bill
+//     Route::post('/{id}/discount', [App\Http\Controllers\Manager\BillController::class, 'applyDiscount']); // Apply discount to the bill
+// });
+
+
+/*
+Route::prefix('manager/order')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+    Route::get('/', [App\Http\Controllers\Manager\OrderController::class, 'index']); // List all orders
+    Route::post('/', [App\Http\Controllers\Manager\OrderController::class, 'store']); // Create a new order
+    Route::get('/{id}', [App\Http\Controllers\Manager\OrderController::class, 'show']); // View specific order details
+    Route::put('/{id}', [App\Http\Controllers\Manager\OrderController::class, 'update']); // Update order
+    Route::delete('/{id}', [App\Http\Controllers\Manager\OrderController::class, 'destroy']); // Delete order
+    Route::post('/{id}/serve', [App\Http\Controllers\Manager\OrderController::class, 'markAsServed']); // Mark order as served
+});
+
+Route::prefix('manager/order-item')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+    Route::post('/{orderId}', [App\Http\Controllers\Manager\OrderItemController::class, 'store']); // Add item to order
+    Route::delete('/{itemId}', [App\Http\Controllers\Manager\OrderItemController::class, 'destroy']); // Remove item from order
+});
+
+
+*/
+
+
+
+Route::post('/manager/orders', [App\Http\Controllers\Manager\OrderController::class, 'store']);
+Route::post('/manager/bills/{bill}/close', [App\Http\Controllers\Manager\OrderController::class, 'closeBill']);
+
+
+
 ///////////////////// manager ////////////////////////////////////
 
 
@@ -91,15 +124,3 @@ Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middle
     Route::post('/{id}', [MenuController::class, 'update']);
     Route::delete('/{id}', [MenuController::class, 'destroy']);
 });
-
-Route::prefix('manager/order')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
-    Route::get('/', [OrderController::class, 'index']);
-    Route::post('/', [OrderController::class, 'store']);
-    Route::get('/{id}', [OrderController::class, 'show']);
-    Route::put('/{id}', [OrderController::class, 'update']);
-    Route::delete('/{id}', [OrderController::class, 'destroy']);
-    Route::post('/{id}/discount', [OrderController::class, 'applyDiscount']);
-});
-
-
-
