@@ -48,7 +48,7 @@ class OrderService
                     'table_number' => $tableNumber,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price,
+                    'price' => $price* $item['quantity'],
                     'status' => 'preparing',
                     'kitchen_section_id' => optional($kitchenSection)->id,
                 ]);
@@ -93,7 +93,7 @@ class OrderService
                     'table_number' => $order->table_number,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price,
+                    'price' => $price* $item['quantity'],
                     'status' => 'preparing',
                     'kitchen_section_id' => optional($kitchenSection)->id,
                 ]);
@@ -103,6 +103,10 @@ class OrderService
             $order->bill->update([
                 'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
             ]);
+            $order->bill->update([
+                'final_price' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
+            ]);
+            
 
             return $order->load('items');
         });
@@ -132,6 +136,9 @@ class OrderService
             $order->bill->update([
                 'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
             ]);
+            $order->bill->update([
+                'final_price' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
+            ]);
 
             return $order->load('items');
         });
@@ -158,6 +165,8 @@ class OrderService
             // Recalculate bill total (excluding canceled orders)
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal]);
+            $bill->update(['final_price' => $billTotal]);
+
 
             return $orderItem->fresh();
         });
@@ -179,6 +188,7 @@ class OrderService
             // Recalculate bill total (excluding canceled orders)
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal]);
+            $bill->update(['final_price' => $billTotal]);
 
             return true;
         });
@@ -227,6 +237,7 @@ class OrderService
 
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal]);
+            $bill->update(['final_price' => $billTotal]);
 
             return $orderItem->fresh();
         });
