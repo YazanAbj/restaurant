@@ -15,6 +15,7 @@ class Order extends Model
         'total_price',
         'bill_id',
         'has_been_served',
+        'is_canceled'
 
     ];
 

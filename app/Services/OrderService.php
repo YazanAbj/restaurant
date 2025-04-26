@@ -114,13 +114,21 @@ class OrderService
         return DB::transaction(function () use ($orderId, $reason) {
             $order = Order::findOrFail($orderId);
 
+            if ($order->is_canceled) {
+                return response()->json(['message' => 'You have already canceled this order.'], 409);
+            }
+
+            // Cancel the order
             $order->update([
                 'is_canceled' => true,
-                'cancel_reason' => $reason
+                'cancel_reason' => $reason,
+                'total_price' => 0, // Important: set order total to 0
             ]);
 
+            // Cancel the order items
             $order->items()->update(['status' => 'canceled']);
 
+            // Recalculate and update the bill total
             $order->bill->update([
                 'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
             ]);
@@ -128,7 +136,6 @@ class OrderService
             return $order->load('items');
         });
     }
-
 
 
     public function cancelOrderItem($orderItemId)
