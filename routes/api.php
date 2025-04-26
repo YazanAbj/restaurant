@@ -4,6 +4,7 @@ use App\Http\Controllers\Manager\InventoryController;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\InventoryItemController;
+use App\Http\Controllers\Kitchen\KitchenSectionController;
 use App\Http\Controllers\Manager\MenuController;
 use App\Http\Controllers\Manager\OrderController;
 use App\Http\Controllers\Manager\BillController;
@@ -121,6 +122,13 @@ Route::prefix('/manager/orders')->group(function () {
 
 
 
+Route::get('/manager/kitchen/sections/{id}/queue', [KitchenSectionController::class, 'queue']);
+Route::post('/manager/kitchen/order-items/{id}/ready', [KitchenSectionController::class, 'markItemReady']);
+Route::get('/manager/kitchen/sections/{id}/ready-items', [KitchenSectionController::class, 'readyItems']);
+Route::get('/manager/kitchen/sections/{id}/items-by-status', [KitchenSectionController::class, 'itemsByStatus']);
+
+
+
 ///////////////////// manager ////////////////////////////////////
 
 
@@ -132,14 +140,13 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->m
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
     Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
 });
- 
 
 
-Route::prefix('manager/bills') ->namespace('App\Http\Controllers\Manager')  ->group(function () {
-        Route::get('/', [App\Http\Controllers\Manager\BillController::class, 'index']);                         
-        Route::get('/status/{status}', [App\Http\Controllers\Manager\BillController::class, 'filterByStatus']); 
-        Route::get('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'show']);                   
-        Route::post('/{bill}/discount', [App\Http\Controllers\Manager\BillController::class, 'applyDiscount']); 
-        Route::delete('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'destroy']);              
-    });
 
+Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->group(function () {
+    Route::get('/', [App\Http\Controllers\Manager\BillController::class, 'index']);
+    Route::get('/status/{status}', [App\Http\Controllers\Manager\BillController::class, 'filterByStatus']);
+    Route::get('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'show']);
+    Route::post('/{bill}/discount', [App\Http\Controllers\Manager\BillController::class, 'applyDiscount']);
+    Route::delete('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'destroy']);
+});

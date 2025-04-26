@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->string('table_number');
             $table->foreignId('menu_item_id')->constrained()->onDelete('cascade');
+            $table->foreignId('kitchen_section_id')->nullable()->constrained('kitchen_sections')->onDelete('set null');
             $table->integer('quantity');
             $table->decimal('price', 8, 2)->default(0);
             $table->enum('status', ['preparing', 'finished', 'canceled'])->default('preparing');

@@ -15,7 +15,8 @@ class OrderItem extends Model
         'menu_item_id',
         'quantity',
         'status',
-        'price'
+        'price',
+        'kitchen_section_id'
     ];
 
     public function order()
@@ -26,5 +27,10 @@ class OrderItem extends Model
     public function menuItem()
     {
         return $this->belongsTo(MenuItem::class);
+    }
+
+    public function kitchenSection()
+    {
+        return $this->belongsTo(KitchenSection::class);
     }
 }

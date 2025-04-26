@@ -8,13 +8,13 @@ use Illuminate\Http\Request;
 
 class BillController extends Controller
 {
-    // ✅ Show all bills
+
     public function index()
     {
         return response()->json(Bill::with('orders.Items')->get());
     }
 
-    // ✅ Show all open or closed bills
+
     public function filterByStatus($status)
     {
         if (!in_array($status, ['open', 'paid'])) {
@@ -25,14 +25,14 @@ class BillController extends Controller
         return response()->json($bills);
     }
 
-    // ✅ Show a single bill
+
     public function show(Bill $bill)
     {
         $bill->load('orders.Items');
         return response()->json($bill);
     }
 
-    // ✅ Apply discount
+
     public function applyDiscount(Request $request, Bill $bill)
     {
         $request->validate([
@@ -51,7 +51,7 @@ class BillController extends Controller
         ]);
     }
 
-    // ✅ Delete a bill
+
     public function destroy(Bill $bill)
     {
         $bill->delete();

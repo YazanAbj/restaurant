@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Bill;
+use App\Models\KitchenSection;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -15,13 +16,12 @@ class OrderService
         return DB::transaction(function () use ($tableNumber, $items) {
             // Check if an open bill already exists
             $bill = Bill::where('table_number', $tableNumber)
-                        ->where('status', 'open')
-                        ->first();
+                ->where('status', 'open')
+                ->first();
 
             $totalOrderPrice = 0;
 
             if (!$bill) {
-                // If no open bill, create one
                 $bill = Bill::create([
                     'table_number' => $tableNumber,
                     'status' => 'open',
@@ -41,18 +41,23 @@ class OrderService
                 $total = $price * $item['quantity'];
                 $totalOrderPrice += $total;
 
+                // Determine kitchen section by menu item category
+                $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
+
                 $order->items()->create([
                     'table_number' => $tableNumber,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $total,
+                    'price' => $price,
                     'status' => 'preparing',
+                    'kitchen_section_id' => optional($kitchenSection)->id,
                 ]);
             }
 
+
             // Update order total and bill total
             $order->update(['total_price' => $totalOrderPrice]);
-            
+
             $bill->total += $totalOrderPrice;
             $bill->final_price += $totalOrderPrice;
 
@@ -81,12 +86,16 @@ class OrderService
                 $total = $price * $item['quantity'];
                 $totalOrderPrice += $total;
 
+
+                $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
+
                 $order->items()->create([
                     'table_number' => $order->table_number,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $total,
+                    'price' => $price,
                     'status' => 'preparing',
+                    'kitchen_section_id' => optional($kitchenSection)->id,
                 ]);
             }
 
@@ -98,6 +107,7 @@ class OrderService
             return $order->load('items');
         });
     }
+
 
     public function cancelOrder($orderId, $reason = null)
     {
@@ -195,10 +205,14 @@ class OrderService
             $newPrice = $menuItem->price;
             $newTotal = $newPrice * $newQuantity;
 
+
+            $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
+
             $orderItem->update([
                 'menu_item_id' => $newMenuItemId,
                 'quantity' => $newQuantity,
                 'price' => $newTotal,
+                'kitchen_section_id' => optional($kitchenSection)->id,
             ]);
 
             $orderTotal = $order->items()->sum(DB::raw('price'));
