@@ -16,7 +16,8 @@ class OrderItem extends Model
         'quantity',
         'status',
         'price',
-        'kitchen_section_id'
+        'kitchen_section_id',
+        'notes'
     ];
 
     public function order()

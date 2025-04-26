@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignId('kitchen_section_id')->nullable()->constrained('kitchen_sections')->onDelete('set null');
             $table->integer('quantity');
             $table->decimal('price', 8, 2)->default(0);
+            $table->text('notes')->nullable();
             $table->enum('status', ['preparing', 'finished', 'canceled'])->default('preparing');
             $table->timestamps();
         });
