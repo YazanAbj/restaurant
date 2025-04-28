@@ -101,3 +101,17 @@ Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->group
     Route::post('/{bill}/discount', [App\Http\Controllers\Manager\BillController::class, 'applyDiscount']);
     Route::delete('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'destroy']);
 });
+
+Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->group(function () {
+    Route::get('/', [App\Http\Controllers\Manager\StaffController::class, 'index']);        
+    Route::get('/bonus', [App\Http\Controllers\Manager\StaffController::class, 'bonusindex']);           
+    Route::get('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'show']);       
+    Route::post('/', [App\Http\Controllers\Manager\StaffController::class, 'store']);           
+    Route::post('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'update']);    
+    Route::delete('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'destroy']); 
+    Route::post('/{staff}/bonus', [App\Http\Controllers\Manager\StaffController::class, 'applyBonus']);
+    Route::put('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'updateBonus']);
+    Route::delete('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'deleteBonus']);
+
+});
+
