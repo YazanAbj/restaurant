@@ -15,11 +15,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             KitchenSectionSeeder::class,
-        ]);
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            TableSeeder::class,
+            ReservationSeeder::class,
         ]);
     }
 }

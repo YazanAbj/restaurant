@@ -14,11 +14,13 @@ class Reservation extends Model
         'table_id',
         'reservation_date',
         'reservation_start_time',
-        'reservation_end_time',
         'guest_number',
+        'guest_name',
+        'guest_phone',
         'notes',
         'status',
     ];
+
 
     /**
      * A reservation belongs to a user.

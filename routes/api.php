@@ -26,14 +26,14 @@ Route::post('/login', [AuthController::class, 'login']);
 
 
 //manager
-Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::post('/', [App\Http\Controllers\Manager\ReservationController::class, 'store']);
-    Route::post('/{id}/cancel', [App\Http\Controllers\Manager\ReservationController::class, 'cancel']);
     Route::post('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'update']);
     Route::get('/', [App\Http\Controllers\Manager\ReservationController::class, 'index']);
     Route::get('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'show']);
-    Route::post('/{id}/accept', [App\Http\Controllers\Manager\ReservationController::class, 'accept']);
-    Route::post('/{id}/reject', [App\Http\Controllers\Manager\ReservationController::class, 'reject']);
+    Route::patch('/{id}/status', [App\Http\Controllers\Manager\ReservationController::class, 'updateStatus']);
+    Route::post('/{id}/cancel', [App\Http\Controllers\Manager\ReservationController::class, 'cancel']);
+    Route::delete('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'destroy']);
 });
 
 
