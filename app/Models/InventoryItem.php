@@ -17,14 +17,10 @@ class InventoryItem extends Model
         'received_date',
         'expiry_date',
         'low_stock', 
+        'low_stock_threshold',
         'photo',
 
     ];
 
-    public function menuItems()
-    {
-        return $this->belongsToMany(MenuItem::class, 'menu_item_requirements')
-                    ->withPivot('quantity')
-                    ->withTimestamps();
-    }
+  
 }

@@ -90,6 +90,7 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->g
     Route::post('/{id}', [InventoryController::class, 'update']);
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
     Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
+    Route::post('{id}/subtract', [InventoryController::class, 'subtractQuantity']);
 });
 
 
@@ -112,4 +113,12 @@ Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->group
     Route::post('/{staff}/bonus', [App\Http\Controllers\Manager\StaffController::class, 'applyBonus']);
     Route::put('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'updateBonus']);
     Route::delete('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'deleteBonus']);
+});
+
+Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->group(function () {
+    Route::get('/', [App\Http\Controllers\Manager\MenuController::class, 'index']);
+    Route::get('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'show']);
+    Route::post('/', [App\Http\Controllers\Manager\MenuController::class, 'store']);
+    Route::post('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'update']);
+    Route::delete('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'destroy']);
 });

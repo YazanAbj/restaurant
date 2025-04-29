@@ -22,18 +22,5 @@ class MenuItem extends Model
     /**
      * Get all the requirements (inventory items and quantities) for this menu item.
      */
-    public function requirements()
-    {
-        return $this->hasMany(MenuItemRequirement::class);
-    }
-
-    /**
-     * Get all inventory items related to this menu item via the pivot table.
-     */
-    public function inventoryItems()
-    {
-        return $this->belongsToMany(InventoryItem::class, 'menu_item_requirements')
-                    ->withPivot('quantity')
-                    ->withTimestamps();
-    }
+   
 }

@@ -23,6 +23,7 @@ return new class extends Migration
             $table->date('received_date');
             $table->date('expiry_date')->nullable();
             $table->boolean('low_stock')->default(false);
+            $table->integer('low_stock_threshold')->nullable();
             $table->string('photo')->nullable();
             $table->timestamps();
         });

@@ -13,12 +13,10 @@ class InventoryController extends Controller
     {
         $query = InventoryItem::query();
 
-        // Filter by category
         if ($request->has('category')) {
             $query->where('category', $request->category);
         }
 
-        // Sort by expiry or received date
         if ($request->has('sort_by') && in_array($request->sort_by, ['expiry_date', 'received_date'])) {
             $direction = $request->get('direction', 'asc');
             $query->orderBy($request->sort_by, $direction);
@@ -29,104 +27,114 @@ class InventoryController extends Controller
 
     // Store a new inventory item
     public function store(Request $request)
-{
-    // Validate input data
-    $data = $request->validate([
-        'name' => 'required|string',
-        'description' => 'nullable|string',
-        'category' => 'nullable|string',
-        'quantity' => 'required|integer',
-        'unit' => 'required|string',
-        'price_per_unit' => 'required|numeric',
-        'supplier_name' => 'required|string',
-        'received_date' => 'required|date',
-        'expiry_date' => 'nullable|date',
-        'low_stock' => 'boolean',
-        'photo' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240', // Validate file
-    ]);
+    {
+        $data = $request->validate([
+            'name' => 'required|string',
+            'description' => 'nullable|string',
+            'category' => 'nullable|string',
+            'quantity' => 'required|integer',
+            'unit' => 'required|string',
+            'price_per_unit' => 'required|numeric',
+            'supplier_name' => 'required|string',
+            'received_date' => 'required|date',
+            'expiry_date' => 'nullable|date',
+            'low_stock_threshold' => 'required|integer',
+            'photo' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240',
+        ]);
 
-    // If there's a photo file, handle the upload
-    if ($request->hasFile('photo')) {
-        // Store the photo in the 'public/photos' directory and get the file path
-        $photoPath = $request->file('photo')->store('photos', 'public');
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request->file('photo')->store('photos', 'public');
+        }
 
-        // Add the photo path to the data
-        $data['photo'] = $photoPath;
+        // Determine low_stock
+        $data['low_stock'] = $data['quantity'] <= $data['low_stock_threshold'];
+
+        $item = InventoryItem::create($data);
+
+        return response()->json($item, 201);
     }
 
-    // Create the inventory item and store it in the database
-    $item = InventoryItem::create($data);
-
-    // Return the newly created item as a response
-    return response()->json($item, 201);
-}
-
-
-    // Show single item
+    // Show a single item
     public function show($id)
     {
         $item = InventoryItem::findOrFail($id);
         return response()->json($item);
     }
 
-    // Update inventory item (can set low stock here too)
+    // Update an existing item
     public function update(Request $request, $id)
     {
-        // Find the inventory item by ID
         $item = InventoryItem::findOrFail($id);
-    
-        // Validate the incoming data
+
         $data = $request->validate([
             'name' => 'sometimes|string',
             'description' => 'nullable|string',
-            'category' => 'nullable|string', // Just a string, no existence check needed
+            'category' => 'nullable|string',
             'quantity' => 'sometimes|integer',
             'unit' => 'sometimes|string',
             'price_per_unit' => 'sometimes|numeric',
             'supplier_name' => 'sometimes|string',
             'received_date' => 'sometimes|date',
             'expiry_date' => 'nullable|date',
-            'low_stock' => 'sometimes|boolean',
-            'photo' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240', // Validate the file
+            'low_stock_threshold' => 'sometimes|integer',
+            'photo' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240',
         ]);
-    
 
-        
-        // Check if a new photo file was uploaded
         if ($request->hasFile('photo')) {
-            // Store the new photo in the 'public/photos' directory
-            $photoPath = $request->file('photo')->store('photos', 'public');
-    
-            // Add the new photo path to the data
-            $data['photo'] = $photoPath;
+            $data['photo'] = $request->file('photo')->store('photos', 'public');
         }
-    
-        // Update the inventory item with the validated data
+
         $item->update($data);
-    
-        // Return the updated item as a response
+
+        // Re-check low_stock if quantity or threshold is updated
+        $quantity = $data['quantity'] ?? $item->quantity;
+        $threshold = $data['low_stock_threshold'] ?? $item->low_stock_threshold;
+        $item->low_stock = $quantity <= $threshold;
+        $item->save();
+
         return response()->json($item);
     }
-    
 
-    // Delete inventory item
+    // Delete an item
     public function destroy($id)
     {
         InventoryItem::findOrFail($id)->delete();
         return response()->json(['message' => 'Item deleted']);
     }
 
-    // Optional: Set low stock separately
-    public function setLowStock($id, Request $request)
+    // Get only low stock items
+    public function lowStockItems()
     {
-        $item = InventoryItem::findOrFail($id);
-        $request->validate([
-            'low_stock' => 'required|boolean',
-        ]);
-
-        $item->low_stock = $request->low_stock;
-        $item->save();
-
-        return response()->json(['message' => 'Low stock updated']);
+        $items = InventoryItem::where('low_stock', true)->get();
+        return response()->json($items);
     }
+
+    // Subtract a quantity from the inventory item
+public function subtractQuantity(Request $request, $id)
+{
+    $item = InventoryItem::findOrFail($id);
+
+    $data = $request->validate([
+        'amount' => 'required|integer|min:1',
+    ]);
+
+    // Prevent negative quantity
+    if ($item->quantity < $data['amount']) {
+        return response()->json(['error' => 'Not enough stock to subtract that amount.'], 400);
+    }
+
+    // Subtract quantity
+    $item->quantity -= $data['amount'];
+
+    // Recalculate low stock
+    $item->low_stock = $item->quantity <= $item->low_stock_threshold;
+
+    $item->save();
+
+    return response()->json([
+        'message' => 'Quantity subtracted successfully',
+        'item' => $item
+    ]);
+}
+
 }
