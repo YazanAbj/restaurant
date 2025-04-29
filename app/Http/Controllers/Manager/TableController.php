@@ -9,19 +9,6 @@ use App\Models\Table;
 
 class TableController extends Controller
 {
-    public function index(Request $request)
-    {
-        $date = $request->query('date');
-        $start = $request->query('start_time');
-        $end = $request->query('end_time');
-
-        $tables = Table::all()->filter(function ($table) use ($date, $start, $end) {
-            return Reservation::isTableAvailable($table->id, $date, $start, $end);
-        });
-
-        return response()->json($tables->values());
-    }
-    // POST /api/tables
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -29,11 +16,11 @@ class TableController extends Controller
             'capacity' => 'required|integer|min:1',
         ]);
 
-        // Check if the table_number already exists
+
         if (Table::where('table_number', $validated['table_number'])->exists()) {
             return response()->json([
                 'message' => 'Table with this number already exists.'
-            ], 409);  // 409 Conflict status
+            ], 409);
         }
 
         $table = Table::create($validated);
@@ -45,7 +32,7 @@ class TableController extends Controller
     }
 
 
-    // PUT /api/tables/{id}
+
     public function update(Request $request, $id)
     {
         $table = Table::findOrFail($id);

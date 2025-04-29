@@ -34,4 +34,17 @@ class OrderItem extends Model
     {
         return $this->belongsTo(KitchenSection::class);
     }
+
+    protected static function booted()
+    {
+        static::updated(function ($orderItem) {
+            $order = $orderItem->order;
+
+            $allFinished = $order->items()->where('status', '!=', 'finished')->doesntExist();
+
+            if ($allFinished && !$order->has_been_served) {
+                $order->update(['has_been_served' => true]);
+            }
+        });
+    }
 }

@@ -42,10 +42,10 @@ class KitchenSectionController extends Controller
             return response()->json(['error' => 'Item is not in a preparable state'], 400);
         }
 
-        $orderItem->update(['status' => 'ready']);
+        $orderItem->update(['status' => 'finished']);
 
         return response()->json([
-            'message' => 'Order item marked as ready',
+            'message' => 'Order item marked as finished',
             'order_item' => $orderItem
         ]);
     }

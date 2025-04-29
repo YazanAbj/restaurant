@@ -26,7 +26,7 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.notes' => 'nullable|string|max:500', // 🧠 Allow notes if provided
+            'items.*.notes' => 'nullable|string|max:500',
         ]);
 
         $order = $this->orderService->createOrderWithItems(
@@ -40,8 +40,18 @@ class OrderController extends Controller
 
     public function closeBill($billId)
     {
-        $bill = $this->orderService->closeBill($billId);
-        return response()->json(['message' => 'Bill closed', 'bill' => $bill]);
+        $result = $this->orderService->closeBill($billId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'message' => $result['message']
+            ], 400);
+        }
+
+        return response()->json([
+            'message' => 'Bill closed successfully.',
+            'bill' => $result['bill']
+        ]);
     }
 
     public function update(Request $request, $orderId)
@@ -60,7 +70,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'menu_item_id' => 'required|integer|exists:menu_items,id',
             'quantity' => 'required|integer|min:1',
-            'notes' => 'nullable|string|max:500', // 🧠 Allow notes if provided
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $orderItem = $this->orderService->updateOrderItem(

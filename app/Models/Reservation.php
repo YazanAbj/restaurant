@@ -30,16 +30,6 @@ class Reservation extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Scope to get upcoming confirmed reservations.
-     */
-    public function scopeUpcoming($query)
-    {
-        return $query->where('reservation_date', '>=', now()->toDateString())
-            ->where('status', 'confirmed')
-            ->orderBy('reservation_date')
-            ->orderBy('reservation_time');
-    }
 
     public static function isTableAvailable($tableId, $date, $start, $end, $excludeReservationId = null)
     {

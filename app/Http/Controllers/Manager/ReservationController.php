@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
+use App\Models\RestaurantHour;
 use App\Models\Table;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class ReservationController extends Controller
@@ -21,7 +23,21 @@ class ReservationController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+
+        $reservationDateTime = Carbon::createFromFormat('Y-m-d H:i', $request->reservation_date . ' ' . $request->reservation_start_time);
+
+        if ($reservationDateTime->isPast()) {
+            return response()->json([
+                'message' => 'Reservation time must be in the future.'
+            ], 400);
+        }
+
+
         $table = Table::findOrFail($request->table_id);
+
+        if (!$table) {
+            return response()->json(['message' => 'Table not found.'], 404);
+        }
 
         if ($request->guest_number > $table->capacity) {
             return response()->json([
@@ -87,7 +103,19 @@ class ReservationController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $reservationDateTime = Carbon::createFromFormat('Y-m-d H:i', $request->reservation_date . ' ' . $request->reservation_start_time);
+
+        if ($reservationDateTime->isPast()) {
+            return response()->json([
+                'message' => 'Reservation time must be in the future.'
+            ], 400);
+        }
+
+
         $table = Table::findOrFail($request->table_id);
+        if (!$table) {
+            return response()->json(['message' => 'Table not found.'], 404);
+        }
 
 
         if ($request->guest_number > $table->capacity) {

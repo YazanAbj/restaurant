@@ -7,6 +7,7 @@ use App\Models\KitchenSection;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Table;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -198,7 +199,15 @@ class OrderService
         return DB::transaction(function () use ($billId, $discount) {
             $bill = Bill::findOrFail($billId);
 
-            // Final price is already set when the bill is created
+            $unservedOrders = $bill->orders()->where('has_been_served', false)->exists();
+
+            if ($unservedOrders) {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot close bill: Some orders have not been fully served.'
+                ];
+            }
+
             $discountedTotal = max($bill->total - $discount, 0);
 
             $bill->update([
@@ -206,9 +215,18 @@ class OrderService
                 'status' => 'paid',
             ]);
 
-            return $bill;
+            $firstOrder = $bill->orders->first();
+            if ($firstOrder && $firstOrder->table_number) {
+                Table::where('table_number', $firstOrder->table_number)->update(['status' => 'free']);
+            }
+
+            return [
+                'success' => true,
+                'bill' => $bill
+            ];
         });
     }
+
 
     public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity, $newNotes = null)
     {

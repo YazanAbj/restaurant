@@ -40,7 +40,7 @@ Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')
 
 
 //manager tables
-Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\TableController::class, 'index']);
     Route::post('/', [App\Http\Controllers\Manager\TableController::class, 'store']);
     Route::post('/{id}', [App\Http\Controllers\Manager\TableController::class, 'update']);
@@ -83,7 +83,7 @@ Route::get('/manager/kitchen/sections/{id}/items-by-status', [KitchenSectionCont
 ///////////////////// manager ////////////////////////////////////
 
 
-Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [InventoryController::class, 'index']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::get('/{id}', [InventoryController::class, 'show']);
@@ -103,15 +103,13 @@ Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->group
 });
 
 Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->group(function () {
-    Route::get('/', [App\Http\Controllers\Manager\StaffController::class, 'index']);        
-    Route::get('/bonus', [App\Http\Controllers\Manager\StaffController::class, 'bonusindex']);           
-    Route::get('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'show']);       
-    Route::post('/', [App\Http\Controllers\Manager\StaffController::class, 'store']);           
-    Route::post('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'update']);    
-    Route::delete('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'destroy']); 
+    Route::get('/', [App\Http\Controllers\Manager\StaffController::class, 'index']);
+    Route::get('/bonus', [App\Http\Controllers\Manager\StaffController::class, 'bonusindex']);
+    Route::get('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'show']);
+    Route::post('/', [App\Http\Controllers\Manager\StaffController::class, 'store']);
+    Route::post('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'update']);
+    Route::delete('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'destroy']);
     Route::post('/{staff}/bonus', [App\Http\Controllers\Manager\StaffController::class, 'applyBonus']);
     Route::put('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'updateBonus']);
     Route::delete('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'deleteBonus']);
-
 });
-
