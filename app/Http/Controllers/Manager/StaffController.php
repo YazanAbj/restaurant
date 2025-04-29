@@ -10,10 +10,17 @@ use Illuminate\Support\Facades\Storage;
 
 class StaffController extends Controller
 {
-    public function index()
-    {
-        return response()->json(Staff::all());
+    public function index(Request $request)
+{
+    $query = Staff::query();
+
+    if ($request->has('position')) {
+        $query->where('position', $request->position);
     }
+
+    return response()->json($query->get());
+}
+
 
 
 
@@ -35,7 +42,6 @@ class StaffController extends Controller
             'shift_start' => 'required|date_format:H:i',
             'shift_end' => 'required|date_format:H:i',
             'salary' => 'required|integer',
-            'bonus' => 'nullable|integer',
             'notes' => 'nullable|string',
             'date_joined' => 'required|date',
             'address' => 'required|string|max:255',
@@ -45,12 +51,20 @@ class StaffController extends Controller
             'active' => 'boolean',
         ]);
 
+        $existingStaff = Staff::where('national_id', $validatedData['national_id'])->first();
+
+        if ($existingStaff) {
+            return response()->json([
+                'message' => 'Staff member already exists with this national_id.',
+                'staff' => $existingStaff
+            ], 409); // 409 Conflict
+        }
+    
         if ($request->hasFile('photo')) {
             $validatedData['photo'] = $request->file('photo')->store('staff', 'public');
         }
 
-        $validatedData['bonus'] = $validatedData['bonus'] ?? 0;
-        $validatedData['current_month_salary'] = $validatedData['salary'] + $validatedData['bonus'];
+        $validatedData['current_month_salary'] = $validatedData['salary'] ;
         $validatedData['salary_paid'] = false;
 
         $staff = Staff::create($validatedData);

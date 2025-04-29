@@ -83,13 +83,15 @@ Route::get('/manager/kitchen/sections/{id}/items-by-status', [KitchenSectionCont
 ///////////////////// manager ////////////////////////////////////
 
 
-Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum', IsManager::class)->group(function () {
+Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [InventoryController::class, 'index']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::get('/{id}', [InventoryController::class, 'show']);
     Route::post('/{id}', [InventoryController::class, 'update']);
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
     Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
+    Route::post('{id}/subtract', [InventoryController::class, 'subtractQuantity']);
+
 });
 
 
@@ -115,3 +117,10 @@ Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->group
 
 });
 
+Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->group(function () {
+    Route::get('/', [App\Http\Controllers\Manager\MenuController::class, 'index']);
+    Route::get('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'show']);
+    Route::post('/', [App\Http\Controllers\Manager\MenuController::class, 'store']);
+    Route::post('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'update']); // Using POST for update
+    Route::delete('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'destroy']);
+});

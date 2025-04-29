@@ -26,7 +26,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->date('date_joined');
             $table->string('address');
-            $table->string('national_id');
+            $table->string('national_id')->unique();
             $table->string('emergency_contact');
             $table->string('photo')->nullable();
             $table->boolean('active')->default(true);
