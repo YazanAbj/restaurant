@@ -85,12 +85,14 @@ Route::get('/manager/kitchen/sections/{id}/items-by-status', [KitchenSectionCont
 
 Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [InventoryController::class, 'index']);
+    Route::get('/low-stock', [InventoryController::class, 'lowStockItems']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::get('/{id}', [InventoryController::class, 'show']);
     Route::post('/{id}', [InventoryController::class, 'update']);
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
-    Route::patch('/{id}/low-stock', [InventoryController::class, 'setLowStock']);
     Route::post('{id}/subtract', [InventoryController::class, 'subtractQuantity']);
+    Route::patch('{id}/low-stock', [InventoryController::class, 'setLowStock']);
+
 });
 
 

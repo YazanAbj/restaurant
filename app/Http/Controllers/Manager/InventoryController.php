@@ -25,6 +25,15 @@ class InventoryController extends Controller
         return response()->json($query->get());
     }
 
+
+    public function lowStockItems()
+    {
+        $items = InventoryItem::where('low_stock', true)->get();
+        return response()->json($items);
+    }
+
+
+
     // Store a new inventory item
     public function store(Request $request)
     {
@@ -102,12 +111,13 @@ class InventoryController extends Controller
         return response()->json(['message' => 'Item deleted']);
     }
 
-    // Get only low stock items
-    public function lowStockItems()
-    {
-        $items = InventoryItem::where('low_stock', true)->get();
-        return response()->json($items);
-    }
+
+
+
+
+
+
+    
 
     // Subtract a quantity from the inventory item
 public function subtractQuantity(Request $request, $id)
@@ -137,4 +147,19 @@ public function subtractQuantity(Request $request, $id)
     ]);
 }
 
+
+
+
+public function setLowStock($id, Request $request)
+{
+    $item = InventoryItem::findOrFail($id);
+    $request->validate([
+        'low_stock' => 'required|boolean',
+    ]);
+    $item->low_stock = $request->low_stock;
+    $item->save();
+    return response()->json(['message' => 'Low stock updated']);
+
+
+}
 }
