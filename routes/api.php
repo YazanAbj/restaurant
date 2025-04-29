@@ -34,8 +34,7 @@ Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')
 
 
 //manager tables
-Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
-    Route::get('/', [App\Http\Controllers\Manager\TableController::class, 'index']);
+Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::post('/', [App\Http\Controllers\Manager\TableController::class, 'store']);
     Route::post('/{id}', [App\Http\Controllers\Manager\TableController::class, 'update']);
     Route::post('/{id}/status', [App\Http\Controllers\Manager\TableController::class, 'updateStatus']);
