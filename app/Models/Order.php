@@ -19,7 +19,6 @@ class Order extends Model
 
     ];
 
-
     public function bill()
     {
         return $this->belongsTo(Bill::class);
