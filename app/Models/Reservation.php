@@ -21,10 +21,6 @@ class Reservation extends Model
         'status',
     ];
 
-
-    /**
-     * A reservation belongs to a user.
-     */
     public function user()
     {
         return $this->belongsTo(User::class);
