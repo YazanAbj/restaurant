@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Notifications\OrderItemStatusChanged;
+
 use App\Models\Bill;
 use App\Models\KitchenSection;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Table;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -64,7 +67,7 @@ class OrderService
 
             $bill->save();
 
-            return $order->load('items');
+            return $order->load('items.menuItem');
         });
     }
 
@@ -106,7 +109,7 @@ class OrderService
             ]);
 
 
-            return $order->load('items');
+            return $order->load('items.menuItem');
         });
     }
 
@@ -159,6 +162,11 @@ class OrderService
             $bill = $order->bill;
 
             $orderItem->update(['status' => 'canceled']);
+
+            $admin = User::where('user_role', 'admin')->first();
+            if ($admin) {
+                $admin->notify(new OrderItemStatusChanged($orderItem));
+            }
 
             $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price * quantity'));
             $order->update(['total_price' => $orderTotal]);
@@ -264,7 +272,7 @@ class OrderService
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
 
-            return $orderItem->fresh();
+            return $orderItem->fresh(['menuItem']);
         });
     }
 }

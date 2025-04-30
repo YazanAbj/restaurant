@@ -87,7 +87,7 @@ class OrderController extends Controller
 
     public function index()
     {
-        $orders = Order::with('items')->latest()->get();
+        $orders = Order::with('items.menuItem')->latest()->get();
         return response()->json(['orders' => $orders]);
     }
 
