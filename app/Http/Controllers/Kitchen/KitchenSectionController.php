@@ -10,6 +10,66 @@ use App\Models\OrderItem;
 class KitchenSectionController extends Controller
 {
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'categories' => 'required|array|min:1',
+            'categories.*' => 'string|max:255',
+        ]);
+
+        $kitchenSection = KitchenSection::create([
+            'name' => $validated['name'],
+            'categories' => $validated['categories'],
+        ]);
+
+        return response()->json([
+            'message' => 'Kitchen section created successfully.',
+            'kitchen_section' => $kitchenSection
+        ], 201);
+    }
+
+    public function index()
+    {
+        $sections = KitchenSection::select('id', 'name', 'categories', 'created_at')->get();
+
+        return response()->json(['kitchen_sections' => $sections]);
+    }
+
+    public function show($id)
+    {
+        $section = KitchenSection::select('id', 'name', 'categories', 'created_at')->findOrFail($id);
+
+        return response()->json(['kitchen_section' => $section]);
+    }
+
+
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'categories' => 'required|array|min:1',
+            'categories.*' => 'string',
+        ]);
+
+        $section = KitchenSection::findOrFail($id);
+        $section->update([
+            'name' => $validated['name'],
+            'categories' => $validated['categories'],
+        ]);
+
+        return response()->json(['message' => 'Kitchen section updated', 'kitchen_section' => $section]);
+    }
+
+
+    public function destroy($id)
+    {
+        $section = KitchenSection::findOrFail($id);
+        $section->delete();
+
+        return response()->json(['message' => 'Kitchen section deleted']);
+    }
+
     public function queue($id)
     {
         $pendingItems = OrderItem::with('menuItem', 'order')

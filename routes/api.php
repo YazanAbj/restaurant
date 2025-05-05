@@ -20,7 +20,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 
 //manager
-Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::post('/', [App\Http\Controllers\Manager\ReservationController::class, 'store']);
     Route::post('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'update']);
     Route::get('/', [App\Http\Controllers\Manager\ReservationController::class, 'index']);
@@ -46,7 +46,7 @@ Route::prefix('/manager/orders')->middleware('auth:sanctum')->group(function () 
     Route::get('/', [App\Http\Controllers\Manager\OrderController::class, 'index']);
     Route::get('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'show']);
     Route::post('/', [App\Http\Controllers\Manager\OrderController::class, 'store']);
-    Route::post('/manager/bills/{bill}/close', [App\Http\Controllers\Manager\OrderController::class, 'closeBill']);
+    Route::post('/bills/{bill}/close', [App\Http\Controllers\Manager\OrderController::class, 'closeBill']);
     Route::post('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'update']);
     Route::delete('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'destroy']);
     Route::put('/{order}/cancel', [App\Http\Controllers\Manager\OrderController::class, 'cancel']);
@@ -59,11 +59,16 @@ Route::get('/manager/kitchen/sections/{id}/queue', [KitchenSectionController::cl
 Route::post('/manager/kitchen/order-items/{id}/ready', [KitchenSectionController::class, 'markItemReady']);
 Route::get('/manager/kitchen/sections/{id}/ready-items', [KitchenSectionController::class, 'readyItems']);
 Route::get('/manager/kitchen/sections/{id}/items-by-status', [KitchenSectionController::class, 'itemsByStatus']);
+Route::post('/manager/kitchen-sections', [KitchenSectionController::class, 'store']);
+Route::get('/manager/kitchen-sections', [KitchenSectionController::class, 'index']);
+Route::get('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'show']);
+Route::put('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'update']);
+Route::delete('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'destroy']);
 
 
 ///////////////////// manager ////////////////////////////////////
 
-Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [InventoryController::class, 'index']);
     Route::get('/low-stock', [InventoryController::class, 'lowStockItems']);
     Route::post('/', [InventoryController::class, 'store']);
@@ -72,12 +77,11 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->m
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
     Route::post('{id}/subtract', [InventoryController::class, 'subtractQuantity']);
     Route::patch('{id}/low-stock', [InventoryController::class, 'setLowStock']);
-
 });
 
 
 
-Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\BillController::class, 'index']);
     Route::get('/status/{status}', [App\Http\Controllers\Manager\BillController::class, 'filterByStatus']);
     Route::get('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'show']);
@@ -85,7 +89,7 @@ Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->middl
     Route::delete('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'destroy']);
 });
 
-Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\StaffController::class, 'index']);
     Route::get('/bonus', [App\Http\Controllers\Manager\StaffController::class, 'bonusindex']);
     Route::get('/{staff}', [App\Http\Controllers\Manager\StaffController::class, 'show']);
@@ -97,7 +101,7 @@ Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->middl
     Route::delete('/bonus/{bonusHistory}', [App\Http\Controllers\Manager\StaffController::class, 'deleteBonus']);
 });
 
-Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->middleware('auth:sanctum')->group(function () {
+Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\MenuController::class, 'index']);
     Route::get('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'show']);
     Route::post('/', [App\Http\Controllers\Manager\MenuController::class, 'store']);
