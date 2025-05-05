@@ -15,8 +15,8 @@ class Order extends Model
         'total_price',
         'bill_id',
         'has_been_served',
-        'is_canceled'
-
+        'is_canceled',
+        'user_id',
     ];
 
     public function bill()
@@ -27,5 +27,10 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -3,10 +3,7 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
-use App\Models\Bill;
-use App\Models\MenuItem;
 use App\Models\Order;
-use App\Models\Table;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 
@@ -29,23 +26,30 @@ class OrderController extends Controller
             'items.*.notes' => 'nullable|string|max:500',
         ]);
 
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
         $order = $this->orderService->createOrderWithItems(
             $validated['table_number'],
-            $validated['items']
+            $validated['items'],
+            $user
         );
 
-        return response()->json(['order' => $order], 201);
+        return response()->json([
+            'order' => $order,
+            'user' => $user
+        ], 201);
     }
-
 
     public function closeBill($billId)
     {
         $result = $this->orderService->closeBill($billId);
 
         if (!$result['success']) {
-            return response()->json([
-                'message' => $result['message']
-            ], 400);
+            return response()->json(['message' => $result['message']], 400);
         }
 
         return response()->json([
@@ -62,9 +66,14 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        $order = $this->orderService->updateOrder($orderId, $validated['items']);
+        $user = auth()->user();
+
+        $order = $this->orderService->updateOrder($orderId, $validated['items'], $user);
+
         return response()->json(['order' => $order]);
     }
+
+
     public function updateOrderItem(Request $request, $orderItemId)
     {
         $validated = $request->validate([
@@ -73,29 +82,30 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $orderItem = $this->orderService->updateOrderItem(
+        $order = $this->orderService->updateOrderItem(
             $orderItemId,
             $validated['menu_item_id'],
             $validated['quantity'],
             $validated['notes'] ?? null
         );
 
-        return response()->json(['order_item' => $orderItem]);
+        return response()->json(['order' => $order]);
     }
 
 
 
     public function index()
     {
-        $orders = Order::with('items.menuItem')->latest()->get();
+        $orders = Order::with(['items.menuItem', 'user'])->latest()->get();
         return response()->json(['orders' => $orders]);
     }
 
     public function show($orderId)
     {
-        $order = Order::with('items')->findOrFail($orderId);
+        $order = Order::with(['items.menuItem', 'user'])->findOrFail($orderId);
         return response()->json(['order' => $order]);
     }
+
 
     public function cancel(Request $request, $orderId)
     {
@@ -109,7 +119,7 @@ class OrderController extends Controller
 
     public function destroy($orderId)
     {
-        $order = Order::find($orderId);
+        $order = Order::with(['items.menuItem', 'user'])->find($orderId);
 
         if (!$order) {
             abort(404, 'Order not found.');
@@ -121,9 +131,11 @@ class OrderController extends Controller
 
         $order->delete();
 
-        return response()->json(['message' => 'Order deleted']);
+        return response()->json([
+            'message' => 'Order deleted',
+            'order' => $order
+        ]);
     }
-
 
     public function cancelOrderItem($orderItemId)
     {
@@ -142,6 +154,7 @@ class OrderController extends Controller
         if ($orderItem->is_canceled) {
             abort(409, 'Cannot delete a canceled order.');
         }
+
         $this->orderService->deleteOrderItem($orderItemId);
         return response()->json(['message' => 'Order item deleted successfully']);
     }

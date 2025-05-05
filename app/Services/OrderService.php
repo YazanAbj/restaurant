@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Notifications\OrderItemStatusChanged;
-
 use App\Models\Bill;
 use App\Models\KitchenSection;
 use App\Models\MenuItem;
@@ -15,9 +13,14 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
-    public function createOrderWithItems($tableNumber, $items)
+    public function createOrderWithItems($tableNumber, $items, $user)
     {
-        return DB::transaction(function () use ($tableNumber, $items) {
+        return DB::transaction(function () use ($tableNumber, $items, $user) {
+            $table = Table::where('table_number', $tableNumber)->first();
+            if ($table && $table->status !== 'occupied') {
+                $table->update(['status' => 'occupied']);
+            }
+
             $bill = Bill::where('table_number', $tableNumber)
                 ->where('status', 'open')
                 ->first();
@@ -35,6 +38,7 @@ class OrderService
 
             $order = $bill->orders()->create([
                 'table_number' => $tableNumber,
+                'user_id' => $user->id,
             ]);
 
             foreach ($items as $item) {
@@ -49,7 +53,7 @@ class OrderService
                     'table_number' => $tableNumber,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price * $item['quantity'],
+                    'price' => $total,
                     'status' => 'preparing',
                     'kitchen_section_id' => optional($kitchenSection)->id,
                     'notes' => $item['notes'] ?? null,
@@ -60,22 +64,19 @@ class OrderService
 
             $bill->total += $totalOrderPrice;
             $bill->final_price += $totalOrderPrice;
-
             if ($bill->final_price == 0) {
                 $bill->final_price = $bill->total;
             }
-
             $bill->save();
 
-            return $order->load('items.menuItem');
+            // ✅ Load user relation for name
+            return $order->load(['items.menuItem', 'user']);
         });
     }
 
-
-
-    public function updateOrder($orderId, $items)
+    public function updateOrder($orderId, $items, $user)
     {
-        return DB::transaction(function () use ($orderId, $items) {
+        return DB::transaction(function () use ($orderId, $items, $user) {
             $order = Order::findOrFail($orderId);
             $order->items()->delete();
 
@@ -87,32 +88,31 @@ class OrderService
                 $total = $price * $item['quantity'];
                 $totalOrderPrice += $total;
 
-
                 $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
 
                 $order->items()->create([
                     'table_number' => $order->table_number,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
-                    'price' => $price * $item['quantity'],
+                    'price' => $total,
                     'status' => 'preparing',
                     'kitchen_section_id' => optional($kitchenSection)->id,
                 ]);
             }
 
-            $order->update(['total_price' => $totalOrderPrice]);
-            $order->bill->update([
-                'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
-            ]);
-            $order->bill->update([
-                'final_price' => $order->bill->orders()->where('is_canceled', false)->sum('total_price')
+            $order->update([
+                'total_price' => $totalOrderPrice,
+                'user_id' => $user->id, // ✅ Update user_id to current waiter
             ]);
 
+            $order->bill->update([
+                'total' => $order->bill->orders()->where('is_canceled', false)->sum('total_price'),
+                'final_price' => $order->bill->orders()->where('is_canceled', false)->sum('total_price'),
+            ]);
 
-            return $order->load('items.menuItem');
+            return $order->load(['items.menuItem', 'user']); // ✅ Include user in response
         });
     }
-
 
     public function cancelOrder($orderId, $reason = null)
     {
@@ -162,11 +162,6 @@ class OrderService
             $bill = $order->bill;
 
             $orderItem->update(['status' => 'canceled']);
-
-            $admin = User::where('user_role', 'admin')->first();
-            if ($admin) {
-                $admin->notify(new OrderItemStatusChanged($orderItem));
-            }
 
             $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price * quantity'));
             $order->update(['total_price' => $orderTotal]);
@@ -272,7 +267,7 @@ class OrderService
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
 
-            return $orderItem->fresh(['menuItem']);
+            return $order->fresh(['items.menuItem', 'user']);
         });
     }
 }
