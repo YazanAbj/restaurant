@@ -163,7 +163,7 @@ class OrderService
 
             $orderItem->update(['status' => 'canceled']);
 
-            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price * quantity'));
+            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
             $order->update(['total_price' => $orderTotal]);
 
             // If all items are canceled, mark the order as canceled
