@@ -166,6 +166,16 @@ class OrderService
             $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price * quantity'));
             $order->update(['total_price' => $orderTotal]);
 
+            // If all items are canceled, mark the order as canceled
+            $allItemsCanceled = $order->items()->where('status', '!=', 'canceled')->count() === 0;
+            if ($allItemsCanceled) {
+                $order->update(['is_canceled' => true]);
+                $bill->update([
+                    'total' => max($bill->total - $order->total_price, 0),
+                    'final_price' => max($bill->final_price - $order->total_price, 0),
+                ]);
+            }
+
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
             $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
 
@@ -202,7 +212,11 @@ class OrderService
         return DB::transaction(function () use ($billId, $discount) {
             $bill = Bill::findOrFail($billId);
 
-            $unservedOrders = $bill->orders()->where('has_been_served', false)->exists();
+            $unservedOrders = $bill->orders()
+                ->where('is_canceled', false)
+                ->where('has_been_served', false)
+                ->exists();
+
 
             if ($unservedOrders) {
                 return [
