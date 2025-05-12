@@ -144,7 +144,6 @@ class OrderService
         });
     }
 
-
     public function cancelOrderItem($orderItemId)
     {
         return DB::transaction(function () use ($orderItemId) {
@@ -197,7 +196,7 @@ class OrderService
 
             $orderItem->delete();
 
-            $orderTotal = $order->items()->sum(DB::raw('price * quantity'));
+            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
             $order->update(['total_price' => $orderTotal]);
 
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
@@ -275,7 +274,7 @@ class OrderService
                 'notes' => $newNotes,
             ]);
 
-            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price * quantity'));
+            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
             $order->update(['total_price' => $orderTotal]);
 
             $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
