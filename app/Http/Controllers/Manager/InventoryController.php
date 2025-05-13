@@ -108,7 +108,7 @@ class InventoryController extends Controller
         if($item->low_stock){
             
         $firebase = (new Factory)
-                ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-b79bdf3d32.json'))
+                ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
                 ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); // ✅ <- THIS LINE
 
             $database = $firebase->createDatabase();
@@ -162,7 +162,7 @@ public function subtractQuantity(Request $request, $id)
     if($item->low_stock){
         
     $firebase = (new Factory)
-            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-b79bdf3d32.json'))
+            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
             ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); 
 
         $database = $firebase->createDatabase();
