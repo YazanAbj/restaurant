@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Manager;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\InventoryItem;
+use Kreait\Firebase\Factory;
 
 class InventoryController extends Controller
 {
@@ -21,6 +22,8 @@ class InventoryController extends Controller
             $direction = $request->get('direction', 'asc');
             $query->orderBy($request->sort_by, $direction);
         }
+
+        
 
         return response()->json($query->get());
     }
@@ -101,6 +104,21 @@ class InventoryController extends Controller
         $item->low_stock = $quantity <= $threshold;
         $item->save();
 
+               
+        if($item->low_stock){
+            
+        $firebase = (new Factory)
+                ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-b79bdf3d32.json'))
+                ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); // ✅ <- THIS LINE
+
+            $database = $firebase->createDatabase();
+
+            $ref = $database->getReference('test_api')->push([
+                'message' => 'low stock alert for '. $item->name,
+                'time' => now()->toDateTimeString(),
+            ]);
+        }
+
         return response()->json($item);
     }
 
@@ -140,7 +158,20 @@ public function subtractQuantity(Request $request, $id)
     $item->low_stock = $item->quantity <= $item->low_stock_threshold;
 
     $item->save();
+        
+    if($item->low_stock){
+        
+    $firebase = (new Factory)
+            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-b79bdf3d32.json'))
+            ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); 
 
+        $database = $firebase->createDatabase();
+
+        $ref = $database->getReference('test_api')->push([
+            'message' => 'low stock alert for '. $item->name,
+            'time' => now()->toDateTimeString(),
+        ]);
+    }
     return response()->json([
         'message' => 'Quantity subtracted successfully',
         'item' => $item
