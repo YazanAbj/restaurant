@@ -192,19 +192,17 @@ class OrderService
             }
 
             $order = $orderItem->order;
-            $bill = $order->bill;
+
+            if ($order->bill && $order->bill->status !== 'paid') {
+                throw new \Exception('Cannot delete item unless the bill is paid.', 403);
+            }
 
             $orderItem->delete();
-
-            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
-            $order->update(['total_price' => $orderTotal]);
-
-            $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
-            $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
 
             return true;
         });
     }
+
 
     public function closeBill($billId, $discount = 0)
     {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 
@@ -125,8 +126,10 @@ class OrderController extends Controller
             abort(404, 'Order not found.');
         }
 
-        if ($order->is_canceled) {
-            abort(409, 'Cannot delete a canceled order.');
+        if ($order->bill && $order->bill->status !== 'paid') {
+            return response()->json([
+                'message' => 'Cannot delete an order unless the bill is paid.',
+            ], 403);
         }
 
         $order->delete();
@@ -145,17 +148,18 @@ class OrderController extends Controller
 
     public function destroyOrderItem($orderItemId)
     {
-        $orderItem = Order::find($orderItemId);
+        $orderItem = OrderItem::find($orderItemId);
 
         if (!$orderItem) {
-            abort(404, 'Order not found.');
+            abort(404, 'Order Item not found.');
         }
 
-        if ($orderItem->is_canceled) {
-            abort(409, 'Cannot delete a canceled order.');
-        }
+        try {
+            $this->orderService->deleteOrderItem($orderItemId);
 
-        $this->orderService->deleteOrderItem($orderItemId);
-        return response()->json(['message' => 'Order item deleted successfully']);
+            return response()->json(['message' => 'Order item deleted successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 400);
+        }
     }
 }
