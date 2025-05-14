@@ -14,9 +14,8 @@ class ReportController extends Controller
 {
     public function salesReport(Request $request)
     {
-        $range = $request->input('range'); // 'daily', 'weekly', 'monthly'
+        $range = $request->input('range');
 
-        // Only apply range-based filtering if no explicit dates are provided
         if (!$request->has('start_date') && !$request->has('end_date') && $range) {
             switch ($range) {
                 case 'weekly':
@@ -31,9 +30,8 @@ class ReportController extends Controller
                 default:
                     $startDate = now()->subMonth()->toDateString();
             }
-            $endDate = now()->toDateString(); // Use current date only in range-based logic
+            $endDate = now()->toDateString();
         } else {
-            // Use user-specified dates, or default if not provided
             $startDate = $request->input('start_date', now()->subMonth()->toDateString());
             $endDate = $request->input('end_date', now()->toDateString());
         }
@@ -65,9 +63,11 @@ class ReportController extends Controller
         $categoryBreakdown = [];
         $dailyBreakdown = [];
 
+        $orderItemCount = 0;          // ✅ Count of order items
+        $totalQuantityHandled = 0;    // ✅ Sum of item quantities
+
         foreach ($orders as $order) {
             foreach ($order->items as $item) {
-                // Skip canceled items
                 if ($item->status === 'canceled') {
                     continue;
                 }
@@ -85,6 +85,8 @@ class ReportController extends Controller
                 $quantity = $item->quantity;
 
                 $totalSales += $price;
+                $orderItemCount++;               // ✅ Count order item
+                $totalQuantityHandled += $quantity; // ✅ Sum item quantity
 
                 if (!isset($menuItemBreakdown[$menuItemId])) {
                     $menuItemBreakdown[$menuItemId] = [
@@ -115,25 +117,28 @@ class ReportController extends Controller
                 $dailyBreakdown[$orderDate]['total_sales'] += $price;
             }
 
-            $waiterId = $order->user_id;
-            $waiterName = $order->user->name ?? 'Unknown';
+            $waiter = $order->user;
+
+            if (!$waiter) continue; // skip if user not found
+
+            $waiterId = $waiter->id;
 
             if (!isset($waiterBreakdown[$waiterId])) {
                 $waiterBreakdown[$waiterId] = [
-                    'user_id' => $waiterId,
-                    'name' => $waiterName,
-                    'orders_count' => 0,
+                    'user' => $waiter,
                     'total_sales' => 0,
+                    //  'orders_count' => 0,
                 ];
             }
 
-            $waiterBreakdown[$waiterId]['orders_count'] += 1;
+            //$waiterBreakdown[$waiterId]['orders_count'] += 1;
             $waiterBreakdown[$waiterId]['total_sales'] += $order->total_price;
         }
 
         return response()->json([
             'total_sales' => $totalSales,
-            'orders_count' => $orders->count(),
+            'order_item_count' => $orderItemCount,              // ✅ Replaces 'orders_count'
+            'total_menu_items_handled' => $totalQuantityHandled, // ✅ Sum of item quantities
             'start_date' => $startDate,
             'end_date' => $endDate,
             'menu_items' => array_values($menuItemBreakdown),
@@ -142,6 +147,7 @@ class ReportController extends Controller
             'daily_sales' => array_values($dailyBreakdown),
         ]);
     }
+
 
     public function kitchenSectionReport(Request $request)
     {
@@ -190,6 +196,7 @@ class ReportController extends Controller
             $itemsHandled = 0;
             $canceledItems = 0;
             $totalItems = 0;
+            $totalQuantityHandled = 0;
 
             foreach ($orderItems as $item) {
                 $menuItemCategory = $item->menuItem->category ?? null;
@@ -201,8 +208,8 @@ class ReportController extends Controller
                     if ($item->status === 'canceled') {
                         $canceledItems++;
                     } elseif ($item->status === 'finished') {
-                        // Increment the handled items count when finished
                         $itemsHandled++;
+                        $totalQuantityHandled += $item->quantity;
                     }
                 }
             }
@@ -214,6 +221,7 @@ class ReportController extends Controller
                 'section_name' => $section->name,
                 'categories' => $categories,
                 'order_items_handled' => $itemsHandled,
+                'total_menu_items_handled' => $totalQuantityHandled,
                 'canceled_items' => $canceledItems,
                 'total_items' => $totalItems,
                 'cancelation_rate' => $cancelationRate,
@@ -376,6 +384,7 @@ class ReportController extends Controller
                 'final_price' => $bill->final_price,
                 'orders_count' => $validOrders->count(),
                 'items_count' => $validOrders->flatMap->items->count(),
+                'total_menu_items_handled' => $validOrders->flatMap->items->sum('quantity'),
             ];
         });
 
