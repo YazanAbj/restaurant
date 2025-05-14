@@ -44,7 +44,24 @@ class TableController extends Controller
 
         $validated = $request->validate([
             'capacity' => 'sometimes|required|integer|min:1',
+            'force' => 'sometimes|boolean',
         ]);
+
+        if (isset($validated['capacity']) && $validated['capacity'] != $table->capacity) {
+            $today = now()->toDateString();
+
+            $hasReservations = $table->reservations()
+                ->where('reservation_date', '>=', $today)
+                ->where('reservation_start_time', '>', now()->toTimeString())
+                ->exists();
+
+            if ($hasReservations && empty($validated['force'])) {
+                return response()->json([
+                    'message' => 'Table has upcoming reservations. Use "force: true" to update anyway.',
+                    'warning' => true,
+                ], 409);
+            }
+        }
 
         $table->update($validated);
 
@@ -53,6 +70,10 @@ class TableController extends Controller
             'table' => $table,
         ]);
     }
+
+
+
+
 
     public function updateStatus(Request $request, $id)
     {
