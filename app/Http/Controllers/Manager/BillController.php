@@ -57,4 +57,14 @@ class BillController extends Controller
         $bill->delete();
         return response()->json(['message' => 'Bill deleted successfully.']);
     }
+
+    public function getByTable($tableId)
+    {
+        $bill = Bill::where('table_number', $tableId)
+            ->where('status', 'open')
+            ->with(['orders.items.menuItem', 'orders.user'])
+            ->first();
+
+        return response()->json(['bill' => $bill]);
+    }
 }

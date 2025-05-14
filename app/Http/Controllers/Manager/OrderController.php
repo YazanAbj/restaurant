@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
+use App\Models\Bill;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Table;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 
@@ -44,6 +46,50 @@ class OrderController extends Controller
             'user' => $user
         ], 201);
     }
+    public function filterOrdersByBillStatus(Request $request)
+    {
+        $request->validate([
+            'status' => 'required|in:open,paid',
+        ]);
+
+        try {
+            $orders = $this->orderService->getOrdersByBillStatus($request->status);
+            return response()->json([
+                'status' => $request->status,
+                'orders' => $orders,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function getOrdersByTableNumber($tableNumber)
+    {
+        $table = Table::where('table_number', $tableNumber)->first();
+
+        if (!$table) {
+            return response()->json(['message' => 'Table not found.'], 404);
+        }
+
+        if ($table->status === 'free') {
+            return response()->json(['message' => 'Table is free, no active orders.']);
+        }
+
+        $bill = Bill::where('table_number', $table->id)->where('status', 'open')->first();
+
+        if (!$bill) {
+            return response()->json(['message' => 'No open bill found for this table.']);
+        }
+
+        $orders = $bill->orders()->with('items.menuItem')->get();
+
+        return response()->json([
+            'table' => $table->table_number,
+            'bill_id' => $bill->id,
+            'orders' => $orders,
+        ]);
+    }
+
 
     public function closeBill($billId)
     {

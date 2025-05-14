@@ -24,6 +24,12 @@ class Bill extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+
     // Optional: helper method to calculate discount
     public function applyDiscount()
     {

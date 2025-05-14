@@ -31,6 +31,11 @@ class TableController extends Controller
         ], 201);
     }
 
+    public function show($id)
+    {
+        $table = Table::findOrFail($id);
+        return response()->json(['table' => $table]);
+    }
 
 
     public function update(Request $request, $id)

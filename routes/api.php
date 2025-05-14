@@ -19,8 +19,6 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 
-
-//manager
 Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::post('/', [App\Http\Controllers\Manager\ReservationController::class, 'store']);
     Route::post('/{id}', [App\Http\Controllers\Manager\ReservationController::class, 'update']);
@@ -32,11 +30,9 @@ Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')
 });
 
 
-
-
-//manager tables
 Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::post('/', [App\Http\Controllers\Manager\TableController::class, 'store']);
+    Route::get('/{id}', [App\Http\Controllers\Manager\TableController::class, 'show']);
     Route::post('/{id}', [App\Http\Controllers\Manager\TableController::class, 'update']);
     Route::post('/{id}/status', [App\Http\Controllers\Manager\TableController::class, 'updateStatus']);
     Route::get('/statuses', [App\Http\Controllers\Manager\TableController::class, 'getTablesByStatus']);
@@ -45,6 +41,8 @@ Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->grou
 
 Route::prefix('/manager/orders')->middleware('auth:sanctum')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\OrderController::class, 'index']);
+    Route::get('/by-table/{tableNumber}', [OrderController::class, 'getOrdersByTableNumber']);
+    Route::get('/filter-by-table-number', [OrderController::class, 'filterByTableNumber']);
     Route::get('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'show']);
     Route::post('/', [App\Http\Controllers\Manager\OrderController::class, 'store']);
     Route::post('/bills/{bill}/close', [App\Http\Controllers\Manager\OrderController::class, 'closeBill']);
@@ -66,9 +64,6 @@ Route::get('/manager/kitchen-sections/{id}', [KitchenSectionController::class, '
 Route::put('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'update']);
 Route::delete('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'destroy']);
 
-
-///////////////////// manager ////////////////////////////////////
-
 Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [InventoryController::class, 'index']);
     Route::get('/low-stock', [InventoryController::class, 'lowStockItems']);
@@ -80,14 +75,13 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->g
     Route::patch('{id}/low-stock', [InventoryController::class, 'setLowStock']);
 });
 
-
-
 Route::prefix('manager/bills')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\BillController::class, 'index']);
     Route::get('/status/{status}', [App\Http\Controllers\Manager\BillController::class, 'filterByStatus']);
     Route::get('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'show']);
     Route::post('/{bill}/discount', [App\Http\Controllers\Manager\BillController::class, 'applyDiscount']);
     Route::delete('/{bill}', [App\Http\Controllers\Manager\BillController::class, 'destroy']);
+    Route::get('/table/{tableId}', [App\Http\Controllers\Manager\BillController::class, 'getByTable']);
 });
 
 Route::prefix('manager/staff')->namespace('App\Http\Controllers\Manager')->group(function () {
@@ -109,7 +103,6 @@ Route::prefix('manager/menu')->namespace('App\Http\Controllers\Manager')->group(
     Route::post('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'update']);
     Route::delete('/{id}', [App\Http\Controllers\Manager\MenuController::class, 'destroy']);
 });
-
 
 Route::get('/reports/sales', [ReportController::class, 'salesReport']);
 Route::get('/reports/kitchen-section', [ReportController::class, 'kitchenSectionReport']);

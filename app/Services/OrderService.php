@@ -114,6 +114,23 @@ class OrderService
         });
     }
 
+
+    public function getOrdersByBillStatus(string $status)
+    {
+
+        if (!in_array($status, ['open', 'paid'])) {
+            throw new \InvalidArgumentException("Invalid status. Use 'open' or 'paid'.");
+        }
+
+
+        return Order::whereHas('bill', function ($query) use ($status) {
+            $query->where('status', $status);
+        })
+            ->with(['items.menuItem', 'user', 'bill'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
     public function cancelOrder($orderId, $reason = null)
     {
         return DB::transaction(function () use ($orderId, $reason) {
