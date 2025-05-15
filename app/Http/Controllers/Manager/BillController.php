@@ -9,9 +9,15 @@ use Illuminate\Http\Request;
 class BillController extends Controller
 {
 
-    public function index()
+   public function index(Request $request)
     {
-        return response()->json(Bill::with('orders.Items')->get());
+    $query = Bill::with('orders.items');
+
+    if ($request->has('status')) {
+        $query->where('status', $request->status);
+    }
+
+    return response()->json($query->get());
     }
 
 
