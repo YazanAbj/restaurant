@@ -35,7 +35,7 @@ Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->grou
     Route::get('/{id}', [App\Http\Controllers\Manager\TableController::class, 'show']);
     Route::post('/{id}', [App\Http\Controllers\Manager\TableController::class, 'update']);
     Route::post('/{id}/status', [App\Http\Controllers\Manager\TableController::class, 'updateStatus']);
-    Route::get('/statuses', [App\Http\Controllers\Manager\TableController::class, 'getTablesByStatus']);
+    Route::get('/', [App\Http\Controllers\Manager\TableController::class, 'getTablesByStatus']);
 });
 
 
