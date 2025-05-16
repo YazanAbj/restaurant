@@ -75,10 +75,10 @@ class OrderController extends Controller
             return response()->json(['message' => 'Table is free, no active orders.']);
         }
 
-        $bill = Bill::where('table_number', $table->id)->where('status', 'open')->first();
+        $bill = Bill::where('table_number', $table->table_number)->where('status', 'open')->first();
 
         if (!$bill) {
-            return response()->json(['message' => 'No open bill found for this table.']);
+            return response()->json(['message' => 'No open bill fo  und for this table.']);
         }
 
         $orders = $bill->orders()->with('items.menuItem')->get();
