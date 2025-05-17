@@ -17,6 +17,7 @@ use App\Http\Middleware\IsManager;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 
 Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->group(function () {
