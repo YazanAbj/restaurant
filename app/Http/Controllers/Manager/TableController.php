@@ -31,16 +31,18 @@ class TableController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show($tableNumber)
     {
-        $table = Table::findOrFail($id);
+        $table = Table::where('table_number', $tableNumber)->firstOrFail();
+
         return response()->json(['table' => $table]);
     }
 
 
-    public function update(Request $request, $id)
+
+    public function update(Request $request, $tableNumber)
     {
-        $table = Table::findOrFail($id);
+        $table = Table::where('table_number', $tableNumber)->firstOrFail();
 
         $validated = $request->validate([
             'capacity' => 'sometimes|required|integer|min:1',
@@ -72,16 +74,13 @@ class TableController extends Controller
     }
 
 
-
-
-
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $tableNumber)
     {
         $request->validate([
             'status' => 'required|in:free,occupied',
         ]);
 
-        $table = Table::find($id);
+        $table = Table::where('table_number', $tableNumber)->first();
 
         if (!$table) {
             return response()->json(['message' => 'Table not found.'], 404);
@@ -95,6 +94,8 @@ class TableController extends Controller
             'data' => $table
         ]);
     }
+
+
     public function getTablesByStatus(Request $request)
     {
         $status = $request->query('status');
