@@ -54,7 +54,7 @@ class OrderService
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
                     'price' => $total,
-                    'status' => 'preparing',
+                    'status' => 'pending',
                     'kitchen_section_id' => optional($kitchenSection)->id,
                     'notes' => $item['notes'] ?? null,
                 ]);
@@ -78,6 +78,12 @@ class OrderService
     {
         return DB::transaction(function () use ($orderId, $items, $user) {
             $order = Order::findOrFail($orderId);
+
+            $nonPendingItemsCount = $order->items()->where('status', '!=', 'pending')->count();
+            if ($nonPendingItemsCount > 0) {
+                abort(409, "You can't update this order because it has items that are not pending.");
+            }
+
             $order->items()->delete();
 
             $totalOrderPrice = 0;
@@ -95,7 +101,7 @@ class OrderService
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
                     'price' => $total,
-                    'status' => 'preparing',
+                    'status' => 'pending',
                     'kitchen_section_id' => optional($kitchenSection)->id,
                 ]);
             }
@@ -144,6 +150,12 @@ class OrderService
                 abort(409, 'Order already canceled.');
             }
 
+            $nonPendingItems = $order->items()->where('status', '!=', 'pending')->count();
+
+            if ($nonPendingItems > 0) {
+                abort(409, 'You can’t cancel this order because it contains items that are not pending.');
+            }
+
             $order->update([
                 'is_canceled' => true,
                 'cancel_reason' => $reason,
@@ -161,18 +173,23 @@ class OrderService
         });
     }
 
-    public function cancelOrderItem($orderItemId)
+    public function cancelOrderItem($orderItemId, $force = false)
     {
-        return DB::transaction(function () use ($orderItemId) {
+        return DB::transaction(function () use ($orderItemId, $force) {
             $orderItem = OrderItem::find($orderItemId);
 
             if (!$orderItem) {
                 abort(404, 'Order item not found.');
             }
 
-            if ($orderItem->status === 'canceled') {
-                abort(409, 'Order item already canceled.');
+            if ($orderItem->status !== 'pending') {
+                if ($orderItem->status === 'preparing' && $force) {
+                    // continue
+                } else {
+                    abort(409, "You can't cancel this order item, its status is {$orderItem->status}.");
+                }
             }
+
 
             $order = $orderItem->order;
             $bill = $order->bill;
@@ -259,17 +276,21 @@ class OrderService
     }
 
 
-    public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity, $newNotes = null)
+    public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity, $newNotes = null, $force = false)
     {
-        return DB::transaction(function () use ($orderItemId, $newMenuItemId, $newQuantity, $newNotes) {
+        return DB::transaction(function () use ($orderItemId, $newMenuItemId, $newQuantity, $newNotes, $force) {
             $orderItem = OrderItem::find($orderItemId);
 
             if (!$orderItem) {
                 abort(404, 'Order item not found.');
             }
 
-            if ($orderItem->status === 'canceled') {
-                abort(409, 'Cannot update a canceled order item.');
+            if ($orderItem->status !== 'pending') {
+                if ($orderItem->status === 'preparing' && $force) {
+                    // continue
+                } else {
+                    abort(409, "You can't update this order item, its status is {$orderItem->status}.");
+                }
             }
 
             $order = $orderItem->order;
@@ -297,5 +318,17 @@ class OrderService
 
             return $order->fresh(['items.menuItem', 'user']);
         });
+    }
+    public function getOrderItemsByStatus($status)
+    {
+        $allowedStatuses = ['pending', 'preparing', 'finished', 'canceled'];
+        if (!in_array($status, $allowedStatuses)) {
+            abort(400, 'Invalid order item status.');
+        }
+
+        return OrderItem::with(['menuItem', 'order.user'])
+            ->where('status', $status)
+            ->orderByDesc('created_at')
+            ->get();
     }
 }

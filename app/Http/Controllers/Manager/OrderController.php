@@ -127,13 +127,15 @@ class OrderController extends Controller
             'menu_item_id' => 'required|integer|exists:menu_items,id',
             'quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:500',
+            'force' => 'sometimes|boolean',
         ]);
 
         $order = $this->orderService->updateOrderItem(
             $orderItemId,
             $validated['menu_item_id'],
             $validated['quantity'],
-            $validated['notes'] ?? null
+            $validated['notes'] ?? null,
+            $validated['force'] ?? false
         );
 
         return response()->json(['order' => $order]);
@@ -145,6 +147,17 @@ class OrderController extends Controller
     {
         $orders = Order::with(['items.menuItem', 'user'])->latest()->get();
         return response()->json(['orders' => $orders]);
+    }
+
+    public function getItemsByStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:pending,preparing,finished,canceled',
+        ]);
+
+        $items = $this->orderService->getOrderItemsByStatus($validated['status']);
+
+        return response()->json(['items' => $items]);
     }
 
     public function show($orderId)
@@ -163,6 +176,19 @@ class OrderController extends Controller
         $order = $this->orderService->cancelOrder($orderId, $validated['reason'] ?? null);
         return response()->json(['message' => 'Order canceled', 'order' => $order]);
     }
+
+    public function cancelOrderItem(Request $request, $orderItemId)
+    {
+        $force = $request->boolean('force', false);
+        $orderItem = $this->orderService->cancelOrderItem($orderItemId, $force);
+        return response()->json([
+            'message' => $force && $orderItem->status === 'canceled'
+                ? 'Order item force-canceled while preparing'
+                : 'Order item canceled',
+            'order_item' => $orderItem
+        ]);
+    }
+
 
     public function destroy($orderId)
     {
@@ -186,11 +212,6 @@ class OrderController extends Controller
         ]);
     }
 
-    public function cancelOrderItem($orderItemId)
-    {
-        $orderItem = $this->orderService->cancelOrderItem($orderItemId);
-        return response()->json(['message' => 'Order item canceled', 'order_item' => $orderItem]);
-    }
 
     public function destroyOrderItem($orderItemId)
     {

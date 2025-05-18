@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('quantity');
             $table->decimal('price', 8, 2)->default(0);
             $table->text('notes')->nullable();
-            $table->enum('status', ['preparing', 'finished', 'canceled'])->default('preparing');
+            $table->enum('status', ['pending', 'preparing', 'finished', 'canceled'])->default('preparing');
             $table->timestamps();
         });
     }
