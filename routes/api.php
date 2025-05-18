@@ -54,6 +54,7 @@ Route::prefix('/manager/orders')->middleware('auth:sanctum')->group(function () 
     Route::delete('/order-items/{orderItemId}', [App\Http\Controllers\Manager\OrderController::class, 'destroyOrderItem']);
     Route::patch('/order-items/{orderItemId}/cancel', [App\Http\Controllers\Manager\OrderController::class, 'cancelOrderItem']);
     Route::get('/order-items/by-status', [OrderController::class, 'getItemsByStatus']);
+    Route::patch('/order-items/{id}/prepare', [OrderController::class, 'setPreparing']);
 });
 
 Route::get('/manager/kitchen/sections/{id}/queue', [KitchenSectionController::class, 'queue']);
@@ -65,6 +66,7 @@ Route::get('/manager/kitchen-sections', [KitchenSectionController::class, 'index
 Route::get('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'show']);
 Route::put('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'update']);
 Route::delete('/manager/kitchen-sections/{id}', [KitchenSectionController::class, 'destroy']);
+
 
 Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->group(function () {
     Route::get('/', [InventoryController::class, 'index']);

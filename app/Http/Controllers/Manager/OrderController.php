@@ -229,4 +229,23 @@ class OrderController extends Controller
             return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 400);
         }
     }
+    public function setPreparing($orderItemId)
+    {
+        $orderItem = OrderItem::findOrFail($orderItemId);
+
+        if ($orderItem->status !== 'pending') {
+            return response()->json([
+                'message' => 'Order item is not pending, so it cannot be set to preparing.',
+                'order_item' => $orderItem
+            ], 409);
+        }
+
+        $orderItem->status = 'preparing';
+        $orderItem->save();
+
+        return response()->json([
+            'message' => 'Order item status updated to preparing.',
+            'order_item' => $orderItem
+        ]);
+    }
 }
