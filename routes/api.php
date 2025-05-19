@@ -54,6 +54,7 @@ Route::prefix('/manager/orders')->middleware('auth:sanctum')->group(function () 
     Route::delete('/order-items/{orderItemId}', [App\Http\Controllers\Manager\OrderController::class, 'destroyOrderItem']);
     Route::patch('/order-items/{orderItemId}/cancel', [App\Http\Controllers\Manager\OrderController::class, 'cancelOrderItem']);
     Route::get('/order-items/by-status', [OrderController::class, 'getItemsByStatus']);
+    Route::get('/filter/by-bill-status', [OrderController::class, 'filterOrdersByBillStatus']);
     Route::patch('/order-items/{id}/prepare', [OrderController::class, 'setPreparing']);
 });
 
