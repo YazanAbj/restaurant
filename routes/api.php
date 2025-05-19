@@ -43,7 +43,6 @@ Route::prefix('manager/tables')->namespace('App\Http\Controllers\Manager')->grou
 Route::prefix('/manager/orders')->middleware('auth:sanctum')->group(function () {
     Route::get('/', [App\Http\Controllers\Manager\OrderController::class, 'index']);
     Route::get('/by-table/{tableNumber}', [OrderController::class, 'getOrdersByTableNumber']);
-    Route::get('/filter-by-table-number', [OrderController::class, 'filterByTableNumber']);
     Route::get('/{order}', [App\Http\Controllers\Manager\OrderController::class, 'show']);
     Route::post('/', [App\Http\Controllers\Manager\OrderController::class, 'store']);
     Route::post('/bills/{bill}/close', [App\Http\Controllers\Manager\OrderController::class, 'closeBill']);

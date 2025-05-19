@@ -66,13 +66,14 @@ class OrderController extends Controller
     public function filterOrdersByBillStatus(Request $request)
     {
         $request->validate([
-            'status' => 'required|in:open,paid',
+            'status' => 'nullable|in:open,paid',
         ]);
 
         try {
-            $orders = $this->orderService->getOrdersByBillStatus($request->status);
+            $orders = $this->orderService->getOrdersByBillStatus($request->query('status'));
+
             return response()->json([
-                'status' => $request->status,
+                'status' => $request->query('status'),
                 'orders' => $orders,
             ]);
         } catch (\InvalidArgumentException $e) {

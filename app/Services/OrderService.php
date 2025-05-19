@@ -27,20 +27,26 @@ class OrderService
             ->orderByDesc('created_at')
             ->get();
     }
-    public function getOrdersByBillStatus(string $status)
-    {
 
-        if (!in_array($status, ['open', 'paid'])) {
-            throw new \InvalidArgumentException("Invalid status. Use 'open' or 'paid'.");
+    public function getOrdersByBillStatus(?string $status = null)
+    {
+        $query = Order::with(['items.menuItem', 'user', 'bill']);
+
+        if ($status) {
+            if (!in_array($status, ['open', 'paid'])) {
+                throw new \InvalidArgumentException("Invalid status. Use 'open' or 'paid'.");
+            }
+
+            $query->whereHas('bill', function ($q) use ($status) {
+                $q->where('status', $status);
+            });
+        } else {
+            $query->whereHas('bill', function ($q) {
+                $q->whereIn('status', ['open', 'paid']);
+            });
         }
 
-
-        return Order::whereHas('bill', function ($query) use ($status) {
-            $query->where('status', $status);
-        })
-            ->with(['items.menuItem', 'user', 'bill'])
-            ->orderByDesc('created_at')
-            ->get();
+        return $query->orderByDesc('created_at')->get();
     }
 
 
