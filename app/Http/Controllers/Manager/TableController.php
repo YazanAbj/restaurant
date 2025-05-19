@@ -9,6 +9,33 @@ use App\Models\Table;
 
 class TableController extends Controller
 {
+
+    public function getTablesByStatus(Request $request)
+    {
+        $status = $request->query('status');
+
+        if ($status && !in_array($status, ['free', 'occupied'])) {
+            return response()->json(['message' => 'Invalid status. Use "free" or "occupied".'], 400);
+        }
+
+        $tables = Table::when($status, function ($query) use ($status) {
+            return $query->where('status', $status);
+        })->get();
+
+        return response()->json([
+            'message' => $status ? "Tables with status '{$status}'" : 'All tables',
+            'data' => $tables
+        ]);
+    }
+
+
+    public function show($tableNumber)
+    {
+        $table = Table::where('table_number', $tableNumber)->firstOrFail();
+
+        return response()->json(['table' => $table]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -30,14 +57,6 @@ class TableController extends Controller
             'table' => $table,
         ], 201);
     }
-
-    public function show($tableNumber)
-    {
-        $table = Table::where('table_number', $tableNumber)->firstOrFail();
-
-        return response()->json(['table' => $table]);
-    }
-
 
 
     public function update(Request $request, $tableNumber)
@@ -92,25 +111,6 @@ class TableController extends Controller
         return response()->json([
             'message' => "Table status updated successfully.",
             'data' => $table
-        ]);
-    }
-
-
-    public function getTablesByStatus(Request $request)
-    {
-        $status = $request->query('status');
-
-        if ($status && !in_array($status, ['free', 'occupied'])) {
-            return response()->json(['message' => 'Invalid status. Use "free" or "occupied".'], 400);
-        }
-
-        $tables = Table::when($status, function ($query) use ($status) {
-            return $query->where('status', $status);
-        })->get();
-
-        return response()->json([
-            'message' => $status ? "Tables with status '{$status}'" : 'All tables',
-            'data' => $tables
         ]);
     }
 }

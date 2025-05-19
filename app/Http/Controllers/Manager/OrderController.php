@@ -19,48 +19,21 @@ class OrderController extends Controller
         $this->orderService = $orderService;
     }
 
-    public function store(Request $request)
+    public function index()
+    {
+        $orders = Order::with(['items.menuItem', 'user'])->latest()->get();
+        return response()->json(['orders' => $orders]);
+    }
+
+    public function getItemsByStatus(Request $request)
     {
         $validated = $request->validate([
-            'table_number' => 'required|integer',
-            'items' => 'required|array|min:1',
-            'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.notes' => 'nullable|string|max:500',
+            'status' => 'required|string|in:pending,preparing,finished,canceled',
         ]);
 
-        $user = auth()->user();
+        $items = $this->orderService->getOrderItemsByStatus($validated['status']);
 
-        if (!$user) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
-        }
-
-        $order = $this->orderService->createOrderWithItems(
-            $validated['table_number'],
-            $validated['items'],
-            $user
-        );
-
-        return response()->json([
-            'order' => $order,
-            'user' => $user
-        ], 201);
-    }
-    public function filterOrdersByBillStatus(Request $request)
-    {
-        $request->validate([
-            'status' => 'required|in:open,paid',
-        ]);
-
-        try {
-            $orders = $this->orderService->getOrdersByBillStatus($request->status);
-            return response()->json([
-                'status' => $request->status,
-                'orders' => $orders,
-            ]);
-        } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
+        return response()->json(['items' => $items]);
     }
 
     public function getOrdersByTableNumber($tableNumber)
@@ -90,6 +63,56 @@ class OrderController extends Controller
         ]);
     }
 
+    public function filterOrdersByBillStatus(Request $request)
+    {
+        $request->validate([
+            'status' => 'required|in:open,paid',
+        ]);
+
+        try {
+            $orders = $this->orderService->getOrdersByBillStatus($request->status);
+            return response()->json([
+                'status' => $request->status,
+                'orders' => $orders,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function show($orderId)
+    {
+        $order = Order::with(['items.menuItem', 'user'])->findOrFail($orderId);
+        return response()->json(['order' => $order]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'table_number' => 'required|integer',
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $order = $this->orderService->createOrderWithItems(
+            $validated['table_number'],
+            $validated['items'],
+            $user
+        );
+
+        return response()->json([
+            'order' => $order,
+            'user' => $user
+        ], 201);
+    }
 
     public function closeBill($billId)
     {
@@ -102,6 +125,27 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Bill closed successfully.',
             'bill' => $result['bill']
+        ]);
+    }
+
+
+    public function setPreparing($orderItemId)
+    {
+        $orderItem = OrderItem::findOrFail($orderItemId);
+
+        if ($orderItem->status !== 'pending') {
+            return response()->json([
+                'message' => 'Order item is not pending, so it cannot be set to preparing.',
+                'order_item' => $orderItem
+            ], 409);
+        }
+
+        $orderItem->status = 'preparing';
+        $orderItem->save();
+
+        return response()->json([
+            'message' => 'Order item status updated to preparing.',
+            'order_item' => $orderItem
         ]);
     }
 
@@ -140,32 +184,6 @@ class OrderController extends Controller
 
         return response()->json(['order' => $order]);
     }
-
-
-
-    public function index()
-    {
-        $orders = Order::with(['items.menuItem', 'user'])->latest()->get();
-        return response()->json(['orders' => $orders]);
-    }
-
-    public function getItemsByStatus(Request $request)
-    {
-        $validated = $request->validate([
-            'status' => 'required|string|in:pending,preparing,finished,canceled',
-        ]);
-
-        $items = $this->orderService->getOrderItemsByStatus($validated['status']);
-
-        return response()->json(['items' => $items]);
-    }
-
-    public function show($orderId)
-    {
-        $order = Order::with(['items.menuItem', 'user'])->findOrFail($orderId);
-        return response()->json(['order' => $order]);
-    }
-
 
     public function cancel(Request $request, $orderId)
     {
@@ -212,7 +230,6 @@ class OrderController extends Controller
         ]);
     }
 
-
     public function destroyOrderItem($orderItemId)
     {
         $orderItem = OrderItem::find($orderItemId);
@@ -228,24 +245,5 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 400);
         }
-    }
-    public function setPreparing($orderItemId)
-    {
-        $orderItem = OrderItem::findOrFail($orderItemId);
-
-        if ($orderItem->status !== 'pending') {
-            return response()->json([
-                'message' => 'Order item is not pending, so it cannot be set to preparing.',
-                'order_item' => $orderItem
-            ], 409);
-        }
-
-        $orderItem->status = 'preparing';
-        $orderItem->save();
-
-        return response()->json([
-            'message' => 'Order item status updated to preparing.',
-            'order_item' => $orderItem
-        ]);
     }
 }

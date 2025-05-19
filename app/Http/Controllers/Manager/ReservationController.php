@@ -11,6 +11,49 @@ use Illuminate\Http\Request;
 
 class ReservationController extends Controller
 {
+
+    public function index(Request $request)
+    {
+
+        $query = Reservation::with('table')->orderBy('reservation_date', 'asc')
+            ->orderBy('reservation_start_time', 'asc');
+
+        if ($request->has('day')) {
+            $query->whereDate('reservation_date', '=', \Carbon\Carbon::parse($request->day)->toDateString());
+        }
+
+        if ($request->has('week')) {
+            $startOfWeek = \Carbon\Carbon::parse($request->week)->startOfWeek()->toDateString();
+            $endOfWeek = \Carbon\Carbon::parse($request->week)->endOfWeek()->toDateString();
+            $query->whereBetween('reservation_date', [$startOfWeek, $endOfWeek]);
+        }
+
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+
+        $reservations = $query->paginate(10);
+        return response()->json([
+            'reservations' => $reservations
+        ], 200);
+    }
+
+
+    public function show($id)
+    {
+        $reservation = Reservation::with('table')->findOrFail($id);
+
+        if (!$reservation) {
+            return response()->json(['message' => 'Reservation not found.'], 404);
+        }
+
+        return response()->json([
+            'reservation' => $reservation
+        ], 200);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -199,51 +242,7 @@ class ReservationController extends Controller
     }
 
 
-    public function index(Request $request)
-    {
 
-        $query = Reservation::with('table')->orderBy('reservation_date', 'asc')
-            ->orderBy('reservation_start_time', 'asc');
-
-        // Filter by reservation date (day)
-        if ($request->has('day')) {
-            $query->whereDate('reservation_date', '=', \Carbon\Carbon::parse($request->day)->toDateString());
-        }
-
-        // Filter by reservation date (week)
-        if ($request->has('week')) {
-            $startOfWeek = \Carbon\Carbon::parse($request->week)->startOfWeek()->toDateString();
-            $endOfWeek = \Carbon\Carbon::parse($request->week)->endOfWeek()->toDateString();
-            $query->whereBetween('reservation_date', [$startOfWeek, $endOfWeek]);
-        }
-
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-
-        $reservations = $query->paginate(10);
-        return response()->json([
-            'reservations' => $reservations
-        ], 200);
-    }
-
-
-    public function show($id)
-    {
-        $reservation = Reservation::with('table')->findOrFail($id);
-
-        if (!$reservation) {
-            return response()->json(['message' => 'Reservation not found.'], 404);
-        }
-
-        return response()->json([
-            'reservation' => $reservation
-        ], 200);
-    }
-
-    //to cancel a confirmed reservation
     public function cancel($id)
     {
         $reservation = Reservation::findOrFail($id);

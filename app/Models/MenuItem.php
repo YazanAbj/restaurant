@@ -17,10 +17,4 @@ class MenuItem extends Model
         'image_path',
         'availability_status',
     ];
-    
-
-    /**
-     * Get all the requirements (inventory items and quantities) for this menu item.
-     */
-   
 }

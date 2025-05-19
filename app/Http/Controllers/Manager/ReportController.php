@@ -85,8 +85,8 @@ class ReportController extends Controller
                 $quantity = $item->quantity;
 
                 $totalSales += $price;
-                $orderItemCount++;               // ✅ Count order item
-                $totalQuantityHandled += $quantity; // ✅ Sum item quantity
+                $orderItemCount++;
+                $totalQuantityHandled += $quantity;
 
                 if (!isset($menuItemBreakdown[$menuItemId])) {
                     $menuItemBreakdown[$menuItemId] = [
@@ -119,7 +119,7 @@ class ReportController extends Controller
 
             $waiter = $order->user;
 
-            if (!$waiter) continue; // skip if user not found
+            if (!$waiter) continue;
 
             $waiterId = $waiter->id;
 
@@ -131,14 +131,13 @@ class ReportController extends Controller
                 ];
             }
 
-            //$waiterBreakdown[$waiterId]['orders_count'] += 1;
             $waiterBreakdown[$waiterId]['total_sales'] += $order->total_price;
         }
 
         return response()->json([
             'total_sales' => $totalSales,
-            'order_item_count' => $orderItemCount,              // ✅ Replaces 'orders_count'
-            'total_menu_items_handled' => $totalQuantityHandled, // ✅ Sum of item quantities
+            'order_item_count' => $orderItemCount,
+            'total_menu_items_handled' => $totalQuantityHandled,
             'start_date' => $startDate,
             'end_date' => $endDate,
             'menu_items' => array_values($menuItemBreakdown),
@@ -151,9 +150,8 @@ class ReportController extends Controller
 
     public function kitchenSectionReport(Request $request)
     {
-        $range = $request->input('range'); // 'daily', 'weekly', 'monthly'
+        $range = $request->input('range');
 
-        // Apply range filter only if explicit dates are not provided
         if (!$request->has('start_date') && !$request->has('end_date') && $range) {
             switch ($range) {
                 case 'weekly':
@@ -168,7 +166,7 @@ class ReportController extends Controller
                 default:
                     $startDate = now()->subMonth()->toDateString();
             }
-            $endDate = now()->toDateString(); // Only override endDate in range filter case
+            $endDate = now()->toDateString();
         } else {
             $startDate = $request->input('start_date', now()->subMonth()->toDateString());
             $endDate = $request->input('end_date', now()->toDateString());
@@ -182,7 +180,6 @@ class ReportController extends Controller
 
         $sections = KitchenSection::all();
 
-        // Get order items within the date range (via their order)
         $orderItems = \App\Models\OrderItem::whereHas('order', function ($query) use ($startDate, $endDate) {
             $query->whereDate('created_at', '>=', $startDate)
                 ->whereDate('created_at', '<=', $endDate);
@@ -201,10 +198,8 @@ class ReportController extends Controller
             foreach ($orderItems as $item) {
                 $menuItemCategory = $item->menuItem->category ?? null;
 
-                // Check if the item belongs to the section's categories
                 if ($menuItemCategory && in_array(strtolower($menuItemCategory), array_map('strtolower', $categories))) {
                     $totalItems++;
-                    // Only count items that are finished (not canceled)
                     if ($item->status === 'canceled') {
                         $canceledItems++;
                     } elseif ($item->status === 'finished') {
@@ -237,14 +232,12 @@ class ReportController extends Controller
 
     public function popularDishesReport(Request $request)
     {
-        $range = $request->input('range'); // "daily", "weekly", or "monthly"
+        $range = $request->input('range');
         $category = $request->input('category');
 
-        // Default dates (fallback if no range or manual dates are provided)
         $defaultStart = now()->subMonth()->toDateString();
         $defaultEnd = now()->toDateString();
 
-        // Determine start and end based on 'range' input
         if ($range === 'daily') {
             $startDate = now()->toDateString();
             $endDate = now()->toDateString();
@@ -259,7 +252,6 @@ class ReportController extends Controller
             $endDate = $request->input('end_date', $defaultEnd);
         }
 
-        // Validate inputs
         $request->validate([
             'start_date' => 'nullable|date_format:Y-m-d',
             'end_date' => 'nullable|date_format:Y-m-d',
@@ -280,7 +272,6 @@ class ReportController extends Controller
         $dishStats = [];
 
         foreach ($orderItems as $item) {
-            // Skip canceled order items
             if ($item->status === 'canceled') {
                 continue;
             }
@@ -318,11 +309,10 @@ class ReportController extends Controller
     }
     public function billReport(Request $request)
     {
-        $range = $request->input('range'); // daily, weekly, monthly
+        $range = $request->input('range');
         $defaultStart = now()->subMonth()->toDateString();
         $defaultEnd = now()->toDateString();
 
-        // Determine start and end based on 'range'
         if ($range === 'daily') {
             $startDate = now()->toDateString();
             $endDate = now()->toDateString();
@@ -337,14 +327,12 @@ class ReportController extends Controller
             $endDate = $request->input('end_date', $defaultEnd);
         }
 
-        // Validation
         $request->validate([
             'start_date' => 'nullable|date_format:Y-m-d',
             'end_date' => 'nullable|date_format:Y-m-d',
             'range' => 'nullable|in:daily,weekly,monthly',
         ]);
 
-        // Query bills within date range
         $bills = Bill::with(['orders' => function ($q) {
             $q->where('is_canceled', false)->with(['items' => function ($q2) {
                 $q2->where('status', '!=', 'canceled');
@@ -359,7 +347,6 @@ class ReportController extends Controller
         $totalSales = $bills->sum('final_price');
         $billsCount = $bills->count();
 
-        // Daily sales breakdown
         $dailySales = [];
         foreach ($bills as $bill) {
             $date = $bill->created_at->format('Y-m-d');
@@ -374,7 +361,6 @@ class ReportController extends Controller
             $dailySales[$date]['bills_count'] += 1;
         }
 
-        // Top 5 most expensive bills
         $mostExpensiveBills = $bills->sortByDesc('final_price')->take(5)->values()->map(function ($bill) {
             $validOrders = $bill->orders;
 
@@ -407,7 +393,6 @@ class ReportController extends Controller
         $defaultStart = now()->subMonth()->toDateString();
         $defaultEnd = now()->toDateString();
 
-        // Determine start and end based on 'range'
         if ($range === 'daily') {
             $startDate = now()->toDateString();
             $endDate = now()->toDateString();

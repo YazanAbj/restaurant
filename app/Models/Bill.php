@@ -30,7 +30,6 @@ class Bill extends Model
     }
 
 
-    // Optional: helper method to calculate discount
     public function applyDiscount()
     {
         if (!$this->discount_type || !$this->discount_value) {
@@ -40,7 +39,7 @@ class Bill extends Model
             $this->discount_amount = round(($this->total * $this->discount_value) / 100, 2);
             $this->final_price = $this->total - $this->discount_amount;
         } elseif ($this->discount_type === 'fixed') {
-            $this->discount_amount = min($this->discount_value, $this->total); // Prevent negative
+            $this->discount_amount = min($this->discount_value, $this->total);
             $this->final_price = $this->total - $this->discount_amount;
         }
 

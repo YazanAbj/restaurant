@@ -13,6 +13,37 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
+
+
+    public function getOrderItemsByStatus($status)
+    {
+        $allowedStatuses = ['pending', 'preparing', 'finished', 'canceled'];
+        if (!in_array($status, $allowedStatuses)) {
+            abort(400, 'Invalid order item status.');
+        }
+
+        return OrderItem::with(['menuItem', 'order.user'])
+            ->where('status', $status)
+            ->orderByDesc('created_at')
+            ->get();
+    }
+    public function getOrdersByBillStatus(string $status)
+    {
+
+        if (!in_array($status, ['open', 'paid'])) {
+            throw new \InvalidArgumentException("Invalid status. Use 'open' or 'paid'.");
+        }
+
+
+        return Order::whereHas('bill', function ($query) use ($status) {
+            $query->where('status', $status);
+        })
+            ->with(['items.menuItem', 'user', 'bill'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+
     public function createOrderWithItems($tableNumber, $items, $user)
     {
         return DB::transaction(function () use ($tableNumber, $items, $user) {
@@ -69,8 +100,44 @@ class OrderService
             }
             $bill->save();
 
-            // ✅ Load user relation for name
             return $order->load(['items.menuItem', 'user']);
+        });
+    }
+
+    public function closeBill($billId, $discount = 0)
+    {
+        return DB::transaction(function () use ($billId, $discount) {
+            $bill = Bill::findOrFail($billId);
+
+            $unservedOrders = $bill->orders()
+                ->where('is_canceled', false)
+                ->where('has_been_served', false)
+                ->exists();
+
+
+            if ($unservedOrders) {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot close bill: Some orders have not been fully served.'
+                ];
+            }
+
+            $discountedTotal = max($bill->total - $discount, 0);
+
+            $bill->update([
+                'total' => $discountedTotal,
+                'status' => 'paid',
+            ]);
+
+            $firstOrder = $bill->orders->first();
+            if ($firstOrder && $firstOrder->table_number) {
+                Table::where('table_number', $firstOrder->table_number)->update(['status' => 'free']);
+            }
+
+            return [
+                'success' => true,
+                'bill' => $bill
+            ];
         });
     }
 
@@ -108,7 +175,7 @@ class OrderService
 
             $order->update([
                 'total_price' => $totalOrderPrice,
-                'user_id' => $user->id, // ✅ Update user_id to current waiter
+                'user_id' => $user->id,
             ]);
 
             $order->bill->update([
@@ -116,25 +183,51 @@ class OrderService
                 'final_price' => $order->bill->orders()->where('is_canceled', false)->sum('total_price'),
             ]);
 
-            return $order->load(['items.menuItem', 'user']); // ✅ Include user in response
+            return $order->load(['items.menuItem', 'user']);
         });
     }
 
-
-    public function getOrdersByBillStatus(string $status)
+    public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity, $newNotes = null, $force = false)
     {
+        return DB::transaction(function () use ($orderItemId, $newMenuItemId, $newQuantity, $newNotes, $force) {
+            $orderItem = OrderItem::find($orderItemId);
 
-        if (!in_array($status, ['open', 'paid'])) {
-            throw new \InvalidArgumentException("Invalid status. Use 'open' or 'paid'.");
-        }
+            if (!$orderItem) {
+                abort(404, 'Order item not found.');
+            }
 
+            if ($orderItem->status !== 'pending') {
+                if ($orderItem->status === 'preparing' && $force) {
+                } else {
+                    abort(409, "You can't update this order item, its status is {$orderItem->status}.");
+                }
+            }
 
-        return Order::whereHas('bill', function ($query) use ($status) {
-            $query->where('status', $status);
-        })
-            ->with(['items.menuItem', 'user', 'bill'])
-            ->orderByDesc('created_at')
-            ->get();
+            $order = $orderItem->order;
+            $bill = $order->bill;
+
+            $menuItem = MenuItem::findOrFail($newMenuItemId);
+            $newPrice = $menuItem->price;
+            $newTotal = $newPrice * $newQuantity;
+
+            $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
+
+            $orderItem->update([
+                'menu_item_id' => $newMenuItemId,
+                'quantity' => $newQuantity,
+                'price' => $newTotal,
+                'kitchen_section_id' => optional($kitchenSection)->id,
+                'notes' => $newNotes,
+            ]);
+
+            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
+            $order->update(['total_price' => $orderTotal]);
+
+            $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
+            $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
+
+            return $order->fresh(['items.menuItem', 'user']);
+        });
     }
 
     public function cancelOrder($orderId, $reason = null)
@@ -184,7 +277,6 @@ class OrderService
 
             if ($orderItem->status !== 'pending') {
                 if ($orderItem->status === 'preparing' && $force) {
-                    // continue
                 } else {
                     abort(409, "You can't cancel this order item, its status is {$orderItem->status}.");
                 }
@@ -199,7 +291,6 @@ class OrderService
             $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
             $order->update(['total_price' => $orderTotal]);
 
-            // If all items are canceled, mark the order as canceled
             $allItemsCanceled = $order->items()->where('status', '!=', 'canceled')->count() === 0;
             if ($allItemsCanceled) {
                 $order->update(['is_canceled' => true]);
@@ -235,100 +326,5 @@ class OrderService
 
             return true;
         });
-    }
-
-
-    public function closeBill($billId, $discount = 0)
-    {
-        return DB::transaction(function () use ($billId, $discount) {
-            $bill = Bill::findOrFail($billId);
-
-            $unservedOrders = $bill->orders()
-                ->where('is_canceled', false)
-                ->where('has_been_served', false)
-                ->exists();
-
-
-            if ($unservedOrders) {
-                return [
-                    'success' => false,
-                    'message' => 'Cannot close bill: Some orders have not been fully served.'
-                ];
-            }
-
-            $discountedTotal = max($bill->total - $discount, 0);
-
-            $bill->update([
-                'total' => $discountedTotal,
-                'status' => 'paid',
-            ]);
-
-            $firstOrder = $bill->orders->first();
-            if ($firstOrder && $firstOrder->table_number) {
-                Table::where('table_number', $firstOrder->table_number)->update(['status' => 'free']);
-            }
-
-            return [
-                'success' => true,
-                'bill' => $bill
-            ];
-        });
-    }
-
-
-    public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity, $newNotes = null, $force = false)
-    {
-        return DB::transaction(function () use ($orderItemId, $newMenuItemId, $newQuantity, $newNotes, $force) {
-            $orderItem = OrderItem::find($orderItemId);
-
-            if (!$orderItem) {
-                abort(404, 'Order item not found.');
-            }
-
-            if ($orderItem->status !== 'pending') {
-                if ($orderItem->status === 'preparing' && $force) {
-                    // continue
-                } else {
-                    abort(409, "You can't update this order item, its status is {$orderItem->status}.");
-                }
-            }
-
-            $order = $orderItem->order;
-            $bill = $order->bill;
-
-            $menuItem = MenuItem::findOrFail($newMenuItemId);
-            $newPrice = $menuItem->price;
-            $newTotal = $newPrice * $newQuantity;
-
-            $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
-
-            $orderItem->update([
-                'menu_item_id' => $newMenuItemId,
-                'quantity' => $newQuantity,
-                'price' => $newTotal,
-                'kitchen_section_id' => optional($kitchenSection)->id,
-                'notes' => $newNotes,
-            ]);
-
-            $orderTotal = $order->items()->where('status', '!=', 'canceled')->sum(DB::raw('price'));
-            $order->update(['total_price' => $orderTotal]);
-
-            $billTotal = $bill->orders()->where('is_canceled', false)->sum('total_price');
-            $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
-
-            return $order->fresh(['items.menuItem', 'user']);
-        });
-    }
-    public function getOrderItemsByStatus($status)
-    {
-        $allowedStatuses = ['pending', 'preparing', 'finished', 'canceled'];
-        if (!in_array($status, $allowedStatuses)) {
-            abort(400, 'Invalid order item status.');
-        }
-
-        return OrderItem::with(['menuItem', 'order.user'])
-            ->where('status', $status)
-            ->orderByDesc('created_at')
-            ->get();
     }
 }

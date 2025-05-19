@@ -15,7 +15,6 @@ class BonusHistory extends Model
         'reason',
     ];
 
-    // Define the relationship to the Staff model
     public function staff()
     {
         return $this->belongsTo(Staff::class);
