@@ -72,7 +72,7 @@ class KitchenSectionController extends Controller
 
         $pending = (clone $query)->where('status', 'pending')->orderBy('created_at')->get();
         $preparing = (clone $query)->where('status', 'preparing')->orderBy('created_at')->get();
-        $ready = (clone $query)->where('status', 'finieshed')->orderBy('created_at')->get();
+        $ready = (clone $query)->where('status', 'finished')->orderBy('created_at')->get();
 
         return response()->json([
             'section' => $section->name,
