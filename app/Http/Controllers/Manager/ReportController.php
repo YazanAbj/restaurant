@@ -430,7 +430,7 @@ class ReportController extends Controller
             $cancelledReservations = $reservations->where('status', 'cancelled');
 
             $totalConfirmed = $confirmedReservations->count();
-            $totalGuests = $confirmedReservations->sum('guest_number');
+            $totalGuests = $confirmedReservations->sum('guests_number');
             $capacity = $table->capacity;
 
             $occupancyRate = $totalConfirmed > 0

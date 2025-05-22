@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('table_id')->constrained('tables')->onDelete('cascade');
             $table->date('reservation_date');
             $table->time('reservation_start_time');
-            $table->integer('guest_number');
+            $table->integer('guests_number');
             $table->string('guest_name');
             $table->string('guest_phone')->nullable();
             $table->text('notes')->nullable();

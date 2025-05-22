@@ -59,7 +59,7 @@ class ReservationController extends Controller
         $request->validate([
             'reservation_date' => 'required|date|after_or_equal:today',
             'reservation_start_time' => 'required|date_format:H:i',
-            'guest_number' => 'required|integer|min:1',
+            'guests_number' => 'required|integer|min:1',
             'guest_name' => 'required|string|max:255',
             'guest_phone' => 'string|max:20',
             'table_id' => 'required|integer|exists:tables,table_number',
@@ -82,7 +82,7 @@ class ReservationController extends Controller
             return response()->json(['message' => 'Table not found.'], 404);
         }
 
-        if ($request->guest_number > $table->capacity) {
+        if ($request->guests_number > $table->capacity) {
             return response()->json([
                 'message' => 'Guest number exceeds the table capacity.'
             ], 400);
@@ -119,7 +119,7 @@ class ReservationController extends Controller
             'table_id' => $request->table_id,
             'reservation_date' => $request->reservation_date,
             'reservation_start_time' => $request->reservation_start_time,
-            'guest_number' => $request->guest_number,
+            'guests_number' => $request->guests_number,
             'guest_name' => $request->guest_name,
             'guest_phone' => $request->guest_phone,
             'notes' => $request->notes,
@@ -139,7 +139,7 @@ class ReservationController extends Controller
         $request->validate([
             'reservation_date' => 'required|date|after_or_equal:today',
             'reservation_start_time' => 'required|date_format:H:i',
-            'guest_number' => 'required|integer|min:1',
+            'guests_number' => 'required|integer|min:1',
             'guest_name' => 'required|string|max:255',
             'guest_phone' => 'string|max:20',
             'table_id' => 'required|integer|exists:tables,table_number',
@@ -161,7 +161,7 @@ class ReservationController extends Controller
         }
 
 
-        if ($request->guest_number > $table->capacity) {
+        if ($request->guests_number > $table->capacity) {
             return response()->json([
                 'message' => 'Guest number exceeds the table capacity.'
             ], 400);
@@ -198,7 +198,7 @@ class ReservationController extends Controller
             'table_id' => $request->table_id,
             'reservation_date' => $request->reservation_date,
             'reservation_start_time' => $request->reservation_start_time,
-            'guest_number' => $request->guest_number,
+            'guests_number' => $request->guests_number,
             'guest_name' => $request->guest_name,
             'guest_phone' => $request->guest_phone,
             'notes' => $request->notes,

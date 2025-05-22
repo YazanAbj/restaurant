@@ -14,7 +14,7 @@ class Reservation extends Model
         'table_id',
         'reservation_date',
         'reservation_start_time',
-        'guest_number',
+        'guests_number',
         'guest_name',
         'guest_phone',
         'notes',
@@ -26,7 +26,7 @@ class Reservation extends Model
         return $this->belongsTo(User::class);
     }
 
-
+    /*
     public static function isTableAvailable($tableId, $date, $start, $end, $excludeReservationId = null)
     {
         return !Reservation::where('table_id', $tableId)
@@ -43,7 +43,7 @@ class Reservation extends Model
             })
             ->exists();
     }
-
+*/
     public function table()
     {
         return $this->belongsTo(Table::class);
