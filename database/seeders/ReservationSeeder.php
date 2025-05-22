@@ -21,7 +21,7 @@ class ReservationSeeder extends Seeder
                 'guests_number' => 2,
                 'guest_name' => 'John Doe',
                 'guest_phone' => '1234567890',
-                'notes' => 'Birthday celebration',
+                'notes' => 'Surprise',
                 'status' => 'confirmed',
             ],
             [

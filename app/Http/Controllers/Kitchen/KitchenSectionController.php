@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KitchenSection;
 use Illuminate\Http\Request;
 use App\Models\OrderItem;
+use Carbon\Carbon;
 
 class KitchenSectionController extends Controller
 {
@@ -51,17 +52,18 @@ class KitchenSectionController extends Controller
     }
 
 
-
     public function itemsByStatus(Request $request, $id)
     {
         $section = KitchenSection::findOrFail($id);
         $status = $request->query('status');
 
-        $query = OrderItem::where('kitchen_section_id', $id);
+        $query = OrderItem::where('kitchen_section_id', $id)
+            ->whereDate('created_at', Carbon::today());
 
         if ($status) {
-            $query->where('status', $status);
-            $items = $query->orderBy('created_at')->get();
+            $items = $query->where('status', $status)
+                ->orderBy('created_at')
+                ->get();
 
             return response()->json([
                 'section' => $section->name,
@@ -81,6 +83,8 @@ class KitchenSectionController extends Controller
             'finished' => $ready,
         ]);
     }
+
+
     public function show($id)
     {
         $section = KitchenSection::select('id', 'name', 'categories', 'created_at')->findOrFail($id);
