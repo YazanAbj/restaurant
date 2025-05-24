@@ -56,18 +56,49 @@ class KitchenSectionController extends Controller
     {
         $section = KitchenSection::findOrFail($id);
         $status = $request->query('status');
+        $range = $request->input('range');
 
-        $query = OrderItem::where('kitchen_section_id', $id)
-            ->whereDate('created_at', Carbon::today());
+        $defaultStart = now()->toDateString();
+        $defaultEnd = now()->toDateString();
+
+        if ($range === 'weekly') {
+            $startDate = now()->subDays(7)->toDateString();
+            $endDate = now()->toDateString();
+        } elseif ($range === 'monthly') {
+            $startDate = now()->subDays(30)->toDateString();
+            $endDate = now()->toDateString();
+        } elseif ($range === 'all') {
+            $startDate = null;
+            $endDate = null;
+        } else {
+            $startDate = $request->input('start_date', $defaultStart);
+            $endDate = $request->input('end_date', $defaultEnd);
+        }
+
+        $request->validate([
+            'start_date' => 'nullable|date_format:Y-m-d',
+            'end_date' => 'nullable|date_format:Y-m-d',
+            'range' => 'nullable|in:weekly,monthly,all',
+        ]);
+
+        $query = OrderItem::where('kitchen_section_id', $id);
+
+        if ($startDate && $endDate) {
+            $query = $query->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay(),
+            ]);
+        }
+
 
         if ($status) {
-            $items = $query->where('status', $status)
-                ->orderBy('created_at')
-                ->get();
+            $items = $query->where('status', $status)->orderBy('created_at')->get();
 
             return response()->json([
                 'section' => $section->name,
                 'filtered_status' => $status,
+                'from' => $startDate,
+                'to' => $endDate,
                 'items' => $items,
             ]);
         }
@@ -78,11 +109,14 @@ class KitchenSectionController extends Controller
 
         return response()->json([
             'section' => $section->name,
+            'from' => $startDate,
+            'to' => $endDate,
             'pending' => $pending,
             'preparing' => $preparing,
             'finished' => $ready,
         ]);
     }
+
 
 
     public function show($id)
