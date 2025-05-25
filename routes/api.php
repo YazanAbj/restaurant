@@ -15,9 +15,15 @@ use App\Http\Middleware\IsManager;
 
 
 
-Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::put('/users/{id}', [AuthController::class, 'updateUser']);
+    Route::get('/users', [AuthController::class, 'index']);
+    Route::get('/users/{id}', [AuthController::class, 'show']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
 
 
 Route::prefix('manager/reservations')->namespace('App\Http\Controllers\Manager')->group(function () {
