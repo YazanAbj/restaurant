@@ -190,11 +190,33 @@ class KitchenSectionController extends Controller
     }
 
 
-    public function destroy($id)
+    public function softDelete($id)
     {
         $section = KitchenSection::findOrFail($id);
         $section->delete();
 
-        return response()->json(['message' => 'Kitchen section deleted']);
+        return response()->json(['message' => 'Kitchen section soft deleted.']);
+    }
+
+    public function forceDelete($id)
+    {
+        $section = KitchenSection::withTrashed()->findOrFail($id);
+        $section->forceDelete();
+
+        return response()->json(['message' => 'Kitchen section permanently deleted.']);
+    }
+
+    public function restore($id)
+    {
+        $section = KitchenSection::withTrashed()->findOrFail($id);
+        $section->restore();
+
+        return response()->json(['message' => 'Kitchen section restored successfully.']);
+    }
+
+    public function hidden()
+    {
+        $trashedItems = KitchenSection::onlyTrashed()->get();
+        return response()->json($trashedItems);
     }
 }

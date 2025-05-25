@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Bill extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
+    protected $dates = ['deleted_at'];
     protected $fillable = [
         'table_number',
         'total',
@@ -44,5 +47,22 @@ class Bill extends Model
         }
 
         return $this;
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($bill) {
+            if (!$bill->isForceDeleting()) {
+                $bill->orders()->each(function ($order) {
+                    $order->delete();
+                });
+            }
+        });
+
+        static::restoring(function ($bill) {
+            $bill->orders()->withTrashed()->each(function ($order) {
+                $order->restore();
+            });
+        });
     }
 }

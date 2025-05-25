@@ -11,25 +11,25 @@ use Illuminate\Support\Facades\Storage;
 class StaffController extends Controller
 {
     public function index(Request $request)
-{
-    $query = Staff::query();
+    {
+        $query = Staff::query();
 
-    if ($request->has('position')) {
-        $query->where('position', $request->position);
+        if ($request->has('position')) {
+            $query->where('position', $request->position);
+        }
+
+        return response()->json($query->get());
     }
-
-    return response()->json($query->get());
-}
 
 
 
 
     public function show(Staff $staff)
-{
-    $staff->load('bonusHistories'); // Load the related bonuses
+    {
+        $staff->load('bonusHistories'); // Load the related bonuses
 
-    return response()->json($staff);
-}
+        return response()->json($staff);
+    }
 
 
     public function store(Request $request)
@@ -59,12 +59,12 @@ class StaffController extends Controller
                 'staff' => $existingStaff
             ], 409); // 409 Conflict
         }
-    
+
         if ($request->hasFile('photo')) {
             $validatedData['photo'] = $request->file('photo')->store('staff', 'public');
         }
 
-        $validatedData['current_month_salary'] = $validatedData['salary'] ;
+        $validatedData['current_month_salary'] = $validatedData['salary'];
         $validatedData['salary_paid'] = false;
 
         $staff = Staff::create($validatedData);
@@ -110,20 +110,9 @@ class StaffController extends Controller
         return response()->json($staff);
     }
 
-    public function destroy(Staff $staff)
-    {
-        if ($staff->photo && Storage::disk('public')->exists($staff->photo)) {
-            Storage::disk('public')->delete($staff->photo);
-        }
-
-        $staff->delete();
-
-        return response()->json(['message' => 'Staff deleted successfully']);
-    }
 
 
 
-    
 
 
     public function applyBonus(Request $request, Staff $staff)
@@ -159,49 +148,79 @@ class StaffController extends Controller
             'bonus' => 'required|numeric',
             'reason' => 'nullable|string|max:255',
         ]);
-    
+
         // Get old bonus to reverse it
         $oldBonus = $bonusHistory->bonus_amount;
         $staff = $bonusHistory->staff;
-    
+
         // Update bonus history record
         $bonusHistory->update([
             'bonus_amount' => $validatedData['bonus'],
             'reason' => $validatedData['reason'] ?? $bonusHistory->reason,
         ]);
-    
+
         // Update staff bonus and salary
         $staff->bonus = $staff->bonus - $oldBonus + $validatedData['bonus'];
         $staff->current_month_salary = $staff->salary + $staff->bonus;
         $staff->save();
-    
+
         return response()->json([
             'message' => 'Bonus updated successfully.',
             'bonus' => $bonusHistory,
             'staff' => $staff,
         ]);
     }
-    
+
     public function deleteBonus(BonusHistory $bonusHistory)
-{
-    $staff = $bonusHistory->staff;
+    {
+        $staff = $bonusHistory->staff;
 
-    // Remove bonus amount
-    $staff->bonus -= $bonusHistory->bonus_amount;
-    $staff->current_month_salary = $staff->salary + $staff->bonus;
-    $staff->save();
+        // Remove bonus amount
+        $staff->bonus -= $bonusHistory->bonus_amount;
+        $staff->current_month_salary = $staff->salary + $staff->bonus;
+        $staff->save();
 
-    // Delete bonus history record
-    $bonusHistory->delete();
+        // Delete bonus history record
+        $bonusHistory->delete();
 
-    return response()->json([
-        'message' => 'Bonus deleted successfully.',
-        'staff' => $staff,
-    ]);
-}
+        return response()->json([
+            'message' => 'Bonus deleted successfully.',
+            'staff' => $staff,
+        ]);
+    }
 
-public function bonusindex()
-{
-    return response()->json(BonusHistory::all());
-}
+    public function bonusindex()
+    {
+        return response()->json(BonusHistory::all());
+    }
+
+    public function softDelete($id)
+    {
+        $staff = Staff::findOrFail($id);
+        $staff->delete();
+
+        return response()->json(['message' => 'Staff soft deleted successfully.']);
+    }
+
+    public function restore($id)
+    {
+        $staff = Staff::withTrashed()->findOrFail($id);
+        $staff->restore();
+
+        return response()->json(['message' => 'Staff restored successfully.']);
+    }
+
+    public function forceDelete($id)
+    {
+        $staff = Staff::withTrashed()->findOrFail($id);
+        $staff->forceDelete();
+
+        return response()->json(['message' => 'Staff permanently deleted.']);
+    }
+
+    public function hidden()
+    {
+        $trashedItems = Staff::onlyTrashed()->get();
+        return response()->json($trashedItems);
+    }
 }

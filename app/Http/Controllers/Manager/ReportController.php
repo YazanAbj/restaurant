@@ -7,6 +7,7 @@ use App\Models\Bill;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\KitchenSection;
+use App\Models\OrderItem;
 use App\Models\Table;
 use Carbon\Carbon;
 
@@ -47,15 +48,29 @@ class ReportController extends Controller
             'range' => 'nullable|in:daily,weekly,monthly',
         ]);
 
-        $query = Order::where('is_canceled', false)
+        $query = Order::withTrashed()
+            ->where('is_canceled', false)
             ->whereDate('created_at', '>=', $startDate)
             ->whereDate('created_at', '<=', $endDate);
 
         if ($userId) {
             $query->where('user_id', $userId);
         }
+        $orders = $query->with([
+            'items' => function ($q) {
+                $q->withTrashed();
+            },
+            'items.menuItem' => function ($q) {
+                $q->withTrashed();
+            },
+            'user' => function ($q) {
+                $q->withTrashed();
+            },
+            'bill' => function ($q) {
+                $q->withTrashed();
+            },
+        ])->get();
 
-        $orders = $query->with(['items.menuItem', 'user'])->get();
 
         $totalSales = 0;
         $menuItemBreakdown = [];
@@ -63,8 +78,8 @@ class ReportController extends Controller
         $categoryBreakdown = [];
         $dailyBreakdown = [];
 
-        $orderItemCount = 0;          // ✅ Count of order items
-        $totalQuantityHandled = 0;    // ✅ Sum of item quantities
+        $orderItemCount = 0;
+        $totalQuantityHandled = 0;
 
         foreach ($orders as $order) {
             foreach ($order->items as $item) {
@@ -127,7 +142,6 @@ class ReportController extends Controller
                 $waiterBreakdown[$waiterId] = [
                     'user' => $waiter,
                     'total_sales' => 0,
-                    //  'orders_count' => 0,
                 ];
             }
 
@@ -178,12 +192,18 @@ class ReportController extends Controller
             'range' => 'nullable|in:daily,weekly,monthly',
         ]);
 
-        $sections = KitchenSection::all();
+        $sections = KitchenSection::withTrashed()->get(); // ✅ include soft-deleted sections
 
-        $orderItems = \App\Models\OrderItem::whereHas('order', function ($query) use ($startDate, $endDate) {
-            $query->whereDate('created_at', '>=', $startDate)
-                ->whereDate('created_at', '<=', $endDate);
-        })->with('menuItem')->get();
+        $orderItems = OrderItem::withTrashed()
+            ->whereHas('order', function ($query) use ($startDate, $endDate) {
+                $query->withTrashed()
+                    ->whereDate('created_at', '>=', $startDate)
+                    ->whereDate('created_at', '<=', $endDate);
+            })
+            ->with(['menuItem' => function ($query) {
+                $query->withTrashed();
+            }])
+            ->get();
 
         $sectionStats = [];
 
@@ -259,23 +279,28 @@ class ReportController extends Controller
             'range' => 'nullable|in:daily,weekly,monthly',
         ]);
 
-        $orderItems = \App\Models\OrderItem::whereHas('order', function ($query) use ($startDate, $endDate) {
-            $query->where('is_canceled', false)
-                ->whereDate('created_at', '>=', $startDate)
-                ->whereDate('created_at', '<=', $endDate);
-        })->whereHas('menuItem', function ($query) use ($category) {
-            if ($category) {
-                $query->where('category', $category);
-            }
-        })->with('menuItem')->get();
+        $orderItems = \App\Models\OrderItem::withTrashed()
+            ->whereHas('order', function ($query) use ($startDate, $endDate) {
+                $query->withTrashed()
+                    ->where('is_canceled', false)
+                    ->whereDate('created_at', '>=', $startDate)
+                    ->whereDate('created_at', '<=', $endDate);
+            })
+            ->whereHas('menuItem', function ($query) use ($category) {
+                $query->withTrashed(); // <-- Fix: include soft-deleted menu items
+                if ($category) {
+                    $query->where('category', $category);
+                }
+            })
+            ->with(['menuItem' => function ($query) {
+                $query->withTrashed();
+            }])
+            ->get();
 
         $dishStats = [];
 
         foreach ($orderItems as $item) {
-            if ($item->status === 'canceled') {
-                continue;
-            }
-
+            if ($item->status === 'canceled') continue;
             if (!$item->menuItem) continue;
 
             $id = $item->menu_item_id;
@@ -307,6 +332,9 @@ class ReportController extends Controller
             'most_popular_by_revenue' => $byRevenue,
         ]);
     }
+
+
+
     public function billReport(Request $request)
     {
         $range = $request->input('range');
@@ -333,11 +361,15 @@ class ReportController extends Controller
             'range' => 'nullable|in:daily,weekly,monthly',
         ]);
 
-        $bills = Bill::with(['orders' => function ($q) {
-            $q->where('is_canceled', false)->with(['items' => function ($q2) {
-                $q2->where('status', '!=', 'canceled');
-            }]);
-        }])
+        $bills = Bill::withTrashed() // ✅ Include soft-deleted bills
+            ->with(['orders' => function ($q) {
+                $q->withTrashed() // ✅ Include soft-deleted orders
+                    ->where('is_canceled', false)
+                    ->with(['items' => function ($q2) {
+                        $q2->withTrashed() // ✅ Include soft-deleted order items
+                            ->where('status', '!=', 'canceled');
+                    }]);
+            }])
             ->whereDate('created_at', '>=', $startDate)
             ->whereDate('created_at', '<=', $endDate)
             ->get();
@@ -419,9 +451,11 @@ class ReportController extends Controller
             'range' => 'nullable|in:daily,weekly,monthly,incoming_week,tomorrow',
         ]);
 
-        $tables = Table::with(['reservations' => function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('reservation_date', [$startDate, $endDate]);
-        }])->get();
+        $tables = Table::withTrashed() // ✅ Include soft-deleted tables
+            ->with(['reservations' => function ($query) use ($startDate, $endDate) {
+                $query->withTrashed() // ✅ Include soft-deleted reservations
+                    ->whereBetween('reservation_date', [$startDate, $endDate]);
+            }])->get();
 
         $report = $tables->map(function ($table) {
             $reservations = $table->reservations;

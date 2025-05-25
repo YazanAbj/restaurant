@@ -113,4 +113,66 @@ class TableController extends Controller
             'data' => $table
         ]);
     }
+
+    public function softDelete(Request $request, $id)
+    {
+        $table = Table::findOrFail($id);
+
+        $force = $request->boolean('force', false);
+        $today = now()->toDateString();
+
+        $hasReservations = $table->reservations()
+            ->where('reservation_date', '>=', $today)
+            ->where('reservation_start_time', '>', now()->toTimeString())
+            ->exists();
+
+        if ($hasReservations && !$force) {
+            return response()->json([
+                'message' => 'Table has upcoming reservations. Use "force: true" to delete anyway.',
+                'warning' => true,
+            ], 409);
+        }
+
+        $table->delete();
+
+        return response()->json(['message' => 'Table soft deleted.']);
+    }
+
+    public function forceDelete(Request $request, $id)
+    {
+        $table = Table::withTrashed()->findOrFail($id);
+
+        $force = $request->boolean('force', false);
+        $today = now()->toDateString();
+
+        $hasReservations = $table->reservations()
+            ->where('reservation_date', '>=', $today)
+            ->where('reservation_start_time', '>', now()->toTimeString())
+            ->exists();
+
+        if ($hasReservations && !$force) {
+            return response()->json([
+                'message' => 'Table has upcoming reservations. Use "force: true" to force delete.',
+                'warning' => true,
+            ], 409);
+        }
+
+        $table->forceDelete();
+
+        return response()->json(['message' => 'Table permanently deleted.']);
+    }
+
+    public function restore($id)
+    {
+        $table = Table::withTrashed()->findOrFail($id);
+        $table->restore();
+
+        return response()->json(['message' => 'Table restored successfully.']);
+    }
+
+    public function hidden()
+    {
+        $trashedItems = Table::onlyTrashed()->get();
+        return response()->json($trashedItems);
+    }
 }

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\InventoryItem;
 use Kreait\Firebase\Factory;
 
+
 class InventoryController extends Controller
 {
     // Show inventory with filters
@@ -23,7 +24,7 @@ class InventoryController extends Controller
             $query->orderBy($request->sort_by, $direction);
         }
 
-        
+
 
         return response()->json($query->get());
     }
@@ -104,17 +105,17 @@ class InventoryController extends Controller
         $item->low_stock = $quantity <= $threshold;
         $item->save();
 
-               
-        if($item->low_stock){
-            
-        $firebase = (new Factory)
+
+        if ($item->low_stock) {
+
+            $firebase = (new Factory)
                 ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
                 ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); // ✅ <- THIS LINE
 
             $database = $firebase->createDatabase();
 
             $ref = $database->getReference('test_api')->push([
-                'message' => 'low stock alert for '. $item->name,
+                'message' => 'low stock alert for ' . $item->name,
                 'time' => now()->toDateTimeString(),
             ]);
         }
@@ -122,75 +123,89 @@ class InventoryController extends Controller
         return response()->json($item);
     }
 
-    // Delete an item
-    public function destroy($id)
-    {
-        InventoryItem::findOrFail($id)->delete();
-        return response()->json(['message' => 'Item deleted']);
-    }
-
-
-
-
-
-
-
-    
 
     // Subtract a quantity from the inventory item
-public function subtractQuantity(Request $request, $id)
-{
-    $item = InventoryItem::findOrFail($id);
+    public function subtractQuantity(Request $request, $id)
+    {
+        $item = InventoryItem::findOrFail($id);
 
-    $data = $request->validate([
-        'amount' => 'required|integer|min:1',
-    ]);
+        $data = $request->validate([
+            'amount' => 'required|integer|min:1',
+        ]);
 
-    // Prevent negative quantity
-    if ($item->quantity < $data['amount']) {
-        return response()->json(['error' => 'Not enough stock to subtract that amount.'], 400);
-    }
+        // Prevent negative quantity
+        if ($item->quantity < $data['amount']) {
+            return response()->json(['error' => 'Not enough stock to subtract that amount.'], 400);
+        }
 
-    // Subtract quantity
-    $item->quantity -= $data['amount'];
+        // Subtract quantity
+        $item->quantity -= $data['amount'];
 
-    // Recalculate low stock
-    $item->low_stock = $item->quantity <= $item->low_stock_threshold;
+        // Recalculate low stock
+        $item->low_stock = $item->quantity <= $item->low_stock_threshold;
 
-    $item->save();
-        
-    if($item->low_stock){
-        
-    $firebase = (new Factory)
-            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
-            ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); 
+        $item->save();
 
-        $database = $firebase->createDatabase();
+        if ($item->low_stock) {
 
-        $ref = $database->getReference('test_api')->push([
-            'message' => 'low stock alert for '. $item->name,
-            'time' => now()->toDateTimeString(),
+            $firebase = (new Factory)
+                ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
+                ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com');
+
+            $database = $firebase->createDatabase();
+
+            $ref = $database->getReference('test_api')->push([
+                'message' => 'low stock alert for ' . $item->name,
+                'time' => now()->toDateTimeString(),
+            ]);
+        }
+        return response()->json([
+            'message' => 'Quantity subtracted successfully',
+            'item' => $item
         ]);
     }
-    return response()->json([
-        'message' => 'Quantity subtracted successfully',
-        'item' => $item
-    ]);
-}
 
 
 
 
-public function setLowStock($id, Request $request)
-{
-    $item = InventoryItem::findOrFail($id);
-    $request->validate([
-        'low_stock' => 'required|boolean',
-    ]);
-    $item->low_stock = $request->low_stock;
-    $item->save();
-    return response()->json(['message' => 'Low stock updated']);
+    public function setLowStock($id, Request $request)
+    {
+        $item = InventoryItem::findOrFail($id);
+        $request->validate([
+            'low_stock' => 'required|boolean',
+        ]);
+        $item->low_stock = $request->low_stock;
+        $item->save();
+        return response()->json(['message' => 'Low stock updated']);
+    }
 
+    public function softDelete($id)
+    {
+        $item = InventoryItem::findOrFail($id);
+        $item->delete();
 
-}
+        return response()->json(['message' => 'Inventory item soft deleted successfully.']);
+    }
+
+    public function restore($id)
+    {
+        $item = InventoryItem::withTrashed()->findOrFail($id);
+        $item->restore();
+
+        return response()->json(['message' => 'Inventory item restored successfully.']);
+    }
+
+    public function forceDelete($id)
+    {
+        $item = InventoryItem::withTrashed()->findOrFail($id);
+        $item->forceDelete();
+
+        return response()->json(['message' => 'Inventory item permanently deleted.']);
+    }
+
+    public function hidden()
+    {
+        $trashedItems = InventoryItem::onlyTrashed()->get();
+        return response()->json($trashedItems);
+    }
 }

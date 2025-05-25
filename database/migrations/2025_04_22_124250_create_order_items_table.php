@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'preparing', 'finished', 'canceled'])->default('preparing');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
     /**

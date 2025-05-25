@@ -23,6 +23,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->enum('status', ['confirmed', 'cancelled'])->default('confirmed');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

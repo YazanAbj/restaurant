@@ -2,6 +2,7 @@
 
 
 namespace App\Http\Controllers\Manager;
+
 use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
@@ -34,7 +35,7 @@ class MenuController extends Controller
             'category' => 'required|string',
             'availability_status' => 'required|boolean',
             'image' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240', // Validate image file
-           
+
         ]);
 
         // Handle image upload if provided
@@ -47,7 +48,7 @@ class MenuController extends Controller
         $menuItem = MenuItem::create($data);
 
         // Attach inventory items and quantities to the menu item
-       
+
 
         return response()->json($menuItem, 201);
     }
@@ -73,7 +74,7 @@ class MenuController extends Controller
             'category' => 'sometimes|string',
             'availability_status' => 'sometimes|boolean',
             'image' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240', // Validate image file
-            
+
         ]);
 
         // Handle the image upload if a new image is provided
@@ -92,20 +93,42 @@ class MenuController extends Controller
         $menuItem->update($data);
 
         // Update inventory item requirements if provided
-       
+
 
         return response()->json($menuItem);
     }
 
     // Delete a menu item along with its requirements and photo
-    public function destroy($id)
+    public function softDelete($id)
     {
         $menuItem = MenuItem::findOrFail($id);
 
         // Delete the image if it exists
-        
+
         $menuItem->delete();
 
         return response()->json(['message' => 'Menu item deleted successfully']);
+    }
+
+    public function restore($id)
+    {
+        $menuItem = MenuItem::onlyTrashed()->findOrFail($id);
+        $menuItem->restore();
+
+        return response()->json(['message' => 'Menu item restored successfully']);
+    }
+
+    public function forceDelete($id)
+    {
+        $menuItem = MenuItem::withTrashed()->findOrFail($id);
+        $menuItem->forceDelete();
+
+        return response()->json(['message' => 'Menu item permanently deleted']);
+    }
+
+    public function hidden()
+    {
+        $trashedItems = MenuItem::onlyTrashed()->get();
+        return response()->json($trashedItems);
     }
 }

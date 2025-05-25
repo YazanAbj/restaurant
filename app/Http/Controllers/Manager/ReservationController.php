@@ -267,14 +267,34 @@ class ReservationController extends Controller
     }
 
 
-    public function destroy($id)
+    public function softDelete($id)
     {
         $reservation = Reservation::findOrFail($id);
-
         $reservation->delete();
 
-        return response()->json([
-            'message' => 'Reservation deleted successfully.'
-        ], 200);
+        return response()->json(['message' => 'Reservation soft deleted.']);
+    }
+
+    public function forceDelete($id)
+    {
+        $reservation = Reservation::withTrashed()->findOrFail($id);
+        $reservation->forceDelete();
+
+        return response()->json(['message' => 'Reservation permanently deleted.']);
+    }
+
+    public function restore($id)
+    {
+        $reservation = Reservation::withTrashed()->findOrFail($id);
+        $reservation->restore();
+
+        return response()->json(['message' => 'Reservation restored successfully.']);
+    }
+
+
+    public function hidden()
+    {
+        $trashedItems = Reservation::onlyTrashed()->get();
+        return response()->json($trashedItems);
     }
 }

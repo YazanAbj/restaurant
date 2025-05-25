@@ -17,6 +17,7 @@ return new class extends Migration
             $table->integer('capacity');
             $table->enum('status', ['free', 'occupied'])->default('free');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

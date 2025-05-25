@@ -51,7 +51,7 @@ class OrderController extends Controller
         $bill = Bill::where('table_number', $table->table_number)->where('status', 'open')->first();
 
         if (!$bill) {
-            return response()->json(['message' => 'No open bill fo  und for this table.']);
+            return response()->json(['message' => 'No open bill found for this table.']);
         }
 
         $orders = $bill->orders()->with('items.menuItem')->get();
@@ -81,6 +81,26 @@ class OrderController extends Controller
         }
     }
 
+
+
+    public function hidden()
+    {
+        $trashedOrders = Order::onlyTrashed()
+            ->with([
+                'items' => function ($q) {
+                    $q->withTrashed();
+                },
+                'items.menuItem' => function ($q) {
+                    $q->withTrashed();
+                },
+            ])
+            ->get();
+
+        return response()->json($trashedOrders);
+    }
+
+
+
     public function show($orderId)
     {
         $order = Order::with(['items.menuItem', 'user'])->findOrFail($orderId);
@@ -90,7 +110,7 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'table_number' => 'required|integer',
+            'table_number' => 'required|integer|exists:tables,table_number',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -102,6 +122,8 @@ class OrderController extends Controller
         if (!$user) {
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
+
+
 
         $order = $this->orderService->createOrderWithItems(
             $validated['table_number'],
@@ -209,42 +231,105 @@ class OrderController extends Controller
     }
 
 
-    public function destroy($orderId)
+
+
+    public function softDelete($id)
     {
-        $order = Order::with(['items.menuItem', 'user'])->find($orderId);
+        $order = Order::find($id);
 
         if (!$order) {
-            abort(404, 'Order not found.');
+            return response()->json(['message' => 'Order not found.'], 404);
         }
 
         if ($order->bill && $order->bill->status !== 'paid') {
-            return response()->json([
-                'message' => 'Cannot delete an order unless the bill is paid.',
-            ], 403);
+            return response()->json(['message' => 'Cannot delete order: related bill is not paid.'], 403);
         }
 
         $order->delete();
-
-        return response()->json([
-            'message' => 'Order deleted',
-            'order' => $order
-        ]);
+        return response()->json(['message' => 'Order soft-deleted successfully.']);
     }
 
-    public function destroyOrderItem($orderItemId)
+    public function forceDelete($id)
     {
-        $orderItem = OrderItem::find($orderItemId);
+        $order = Order::withTrashed()->find($id);
 
-        if (!$orderItem) {
-            abort(404, 'Order Item not found.');
+        if (!$order) {
+            return response()->json(['message' => 'Order not found.'], 404);
         }
 
-        try {
-            $this->orderService->deleteOrderItem($orderItemId);
-
-            return response()->json(['message' => 'Order item deleted successfully']);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 400);
+        if ($order->bill && $order->bill->status !== 'paid') {
+            return response()->json(['message' => 'Cannot force delete order: related bill is not paid.'], 403);
         }
+
+        $order->forceDelete();
+        return response()->json(['message' => 'Order permanently deleted.']);
+    }
+
+
+    // Restore soft-deleted order
+    public function restoreOrder($id)
+    {
+        $order = Order::withTrashed()->find($id);
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        if (!$order->trashed()) {
+            return response()->json(['message' => 'Order is not soft-deleted.'], 400);
+        }
+
+        $order->restore();
+        return response()->json(['message' => 'Order restored successfully.']);
+    }
+
+
+    //order Items
+    public function softDeleteOrderItem($id)
+    {
+        $item = OrderItem::find($id);
+
+        if (!$item) {
+            return response()->json(['message' => 'Order item not found.'], 404);
+        }
+
+        if ($item->order && $item->order->bill && $item->order->bill->status !== 'paid') {
+            return response()->json(['message' => 'Cannot delete order item: related bill is not paid.'], 403);
+        }
+
+        $item->delete();
+        return response()->json(['message' => 'Order item soft-deleted successfully.']);
+    }
+
+    public function forceDeleteOrderItem($id)
+    {
+        $item = OrderItem::withTrashed()->find($id);
+
+        if (!$item) {
+            return response()->json(['message' => 'Order item not found.'], 404);
+        }
+
+        if ($item->order && $item->order->bill && $item->order->bill->status !== 'paid') {
+            return response()->json(['message' => 'Cannot force delete order item: related bill is not paid.'], 403);
+        }
+
+        $item->forceDelete();
+        return response()->json(['message' => 'Order item permanently deleted.']);
+    }
+
+    public function restoreOrderItem($id)
+    {
+        $item = OrderItem::withTrashed()->find($id);
+
+        if (!$item) {
+            return response()->json(['message' => 'Order item not found.'], 404);
+        }
+
+        if (!$item->trashed()) {
+            return response()->json(['message' => 'Order item is not soft-deleted.'], 400);
+        }
+
+        $item->restore();
+        return response()->json(['message' => 'Order item restored successfully.']);
     }
 }

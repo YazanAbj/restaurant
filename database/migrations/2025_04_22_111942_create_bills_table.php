@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal('final_price', 10, 2)->nullable();                  // Total after discount
             $table->enum('status', ['open', 'paid'])->default('open');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

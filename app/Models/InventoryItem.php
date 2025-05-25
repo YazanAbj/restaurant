@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryItem extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'description',
@@ -16,11 +19,9 @@ class InventoryItem extends Model
         'supplier_name',
         'received_date',
         'expiry_date',
-        'low_stock', 
+        'low_stock',
         'low_stock_threshold',
         'photo',
 
     ];
-
-  
 }

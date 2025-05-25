@@ -153,4 +153,64 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'logged out']);
     }
+
+    public function softDelete($id)
+    {
+        $authUser = auth()->user();
+        $target = User::findOrFail($id);
+
+        if (!$this->canDelete($authUser, $target)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $target->delete();
+
+        return response()->json(['message' => 'User soft deleted successfully.']);
+    }
+
+    public function restore($id)
+    {
+        $authUser = auth()->user();
+        $target = User::withTrashed()->findOrFail($id);
+
+        if (!$this->canDelete($authUser, $target)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $target->restore();
+
+        return response()->json(['message' => 'User restored successfully.']);
+    }
+
+    public function forceDelete($id)
+    {
+        $authUser = auth()->user();
+        $target = User::withTrashed()->findOrFail($id);
+
+        if (!$this->canDelete($authUser, $target)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $target->forceDelete();
+
+        return response()->json(['message' => 'User permanently deleted.']);
+    }
+
+    public function hidden()
+    {
+        $trashedItems = User::onlyTrashed()->get();
+        return response()->json($trashedItems);
+    }
+    private function canDelete($authUser, $target)
+    {
+        if ($authUser->user_role === 'owner') {
+            return true;
+        }
+
+        if ($authUser->user_role === 'manager') {
+            return !in_array($target->user_role, ['owner', 'manager']);
+        }
+
+        return false;
+    }
 }

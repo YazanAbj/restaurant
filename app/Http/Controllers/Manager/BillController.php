@@ -9,15 +9,15 @@ use Illuminate\Http\Request;
 class BillController extends Controller
 {
 
-   public function index(Request $request)
+    public function index(Request $request)
     {
-    $query = Bill::with('orders.items');
+        $query = Bill::with('orders.items');
 
-    if ($request->has('status')) {
-        $query->where('status', $request->status);
-    }
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
 
-    return response()->json($query->get());
+        return response()->json($query->get());
     }
 
 
@@ -31,7 +31,21 @@ class BillController extends Controller
         return response()->json($bills);
     }
 
+    public function hidden()
+    {
+        $trashedItems = Bill::onlyTrashed()->get();
+        return response()->json($trashedItems);
+    }
 
+    public function getByTable($tableId)
+    {
+        $bill = Bill::where('table_number', $tableId)
+            ->where('status', 'open')
+            ->with(['orders.items.menuItem', 'orders.user'])
+            ->first();
+
+        return response()->json(['bill' => $bill]);
+    }
     public function show(Bill $bill)
     {
         $bill->load('orders.Items');
@@ -57,20 +71,34 @@ class BillController extends Controller
         ]);
     }
 
-
-    public function destroy(Bill $bill)
+    public function softDelete(Bill $bill)
     {
         $bill->delete();
-        return response()->json(['message' => 'Bill deleted successfully.']);
+        return response()->json(['message' => 'Bill soft-deleted successfully.']);
     }
 
-    public function getByTable($tableId)
+    public function forceDelete($id)
     {
-        $bill = Bill::where('table_number', $tableId)
-            ->where('status', 'open')
-            ->with(['orders.items.menuItem', 'orders.user'])
-            ->first();
+        $bill = Bill::withTrashed()->findOrFail($id);
 
-        return response()->json(['bill' => $bill]);
+        $bill->forceDelete();
+
+        return response()->json(['message' => 'Bill permanently deleted.']);
+    }
+    public function restore($id)
+    {
+        $bill = Bill::withTrashed()->find($id);
+
+        if (!$bill) {
+            return response()->json(['message' => 'Bill not found.'], 404);
+        }
+
+        if (!$bill->trashed()) {
+            return response()->json(['message' => 'Bill is not soft-deleted.'], 400);
+        }
+
+        $bill->restore();
+
+        return response()->json(['message' => 'Bill restored successfully.']);
     }
 }

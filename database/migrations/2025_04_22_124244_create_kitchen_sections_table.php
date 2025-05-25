@@ -13,6 +13,7 @@ class CreateKitchenSectionsTable extends Migration
             $table->string('name');
             $table->json('categories');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
