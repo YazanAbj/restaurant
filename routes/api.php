@@ -12,6 +12,7 @@ use App\Http\Controllers\Manager\ReportController;
 use App\Http\Controllers\Manager\ReservationController;
 use App\Http\Controllers\Manager\StaffController;
 use App\Http\Controllers\Manager\TableController;
+use App\Http\Middleware\ApiSetLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\IsManager;
@@ -31,6 +32,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/users/{id}', [AuthController::class, 'softDelete']);
     Route::post('/users/{id}/restore', [AuthController::class, 'restore']);
     Route::delete('/users/{id}/force', [AuthController::class, 'forceDelete']);
+
+    Route::post('/fcm-token', [AuthController::class, 'updateFcmToken']);
+
+
 });
 
 
@@ -113,10 +118,10 @@ Route::prefix('manager/inventory')->namespace('App\Http\Controllers\Manager')->g
     Route::get('/low-stock', [InventoryController::class, 'lowStockItems']);
     Route::post('/', [InventoryController::class, 'store']);
     Route::get('/{id}', [InventoryController::class, 'show']);
-    Route::post('/{id}', [InventoryController::class, 'update']);
+    Route::middleware([ApiSetLocale::class])->post('/{id}', [InventoryController::class, 'update']);
     Route::delete('/{id}', [InventoryController::class, 'destroy']);
-    Route::post('{id}/subtract', [InventoryController::class, 'subtractQuantity']);
-    Route::patch('{id}/low-stock', [InventoryController::class, 'setLowStock']);
+    Route::middleware([ApiSetLocale::class])->post('{id}/subtract', [InventoryController::class, 'subtractQuantity']);
+    Route::middleware([ApiSetLocale::class])->patch('{id}/low-stock', [InventoryController::class, 'setLowStock']);
 
     Route::delete('/{id}', [InventoryController::class, 'softDelete']);
     Route::post('/{id}/restore', [InventoryController::class, 'restore']);

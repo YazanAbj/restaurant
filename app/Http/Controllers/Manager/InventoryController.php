@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Manager;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\InventoryItem;
+use App\Models\User;
 use Kreait\Firebase\Factory;
-
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
 
 class InventoryController extends Controller
 {
-    // Show inventory with filters
     public function index(Request $request)
     {
         $query = InventoryItem::query();
@@ -38,7 +39,6 @@ class InventoryController extends Controller
 
 
 
-    // Store a new inventory item
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -59,7 +59,6 @@ class InventoryController extends Controller
             $data['photo'] = $request->file('photo')->store('photos', 'public');
         }
 
-        // Determine low_stock
         $data['low_stock'] = $data['quantity'] <= $data['low_stock_threshold'];
 
         $item = InventoryItem::create($data);
@@ -67,64 +66,72 @@ class InventoryController extends Controller
         return response()->json($item, 201);
     }
 
-    // Show a single item
     public function show($id)
     {
         $item = InventoryItem::findOrFail($id);
         return response()->json($item);
     }
 
-    // Update an existing item
-    public function update(Request $request, $id)
-    {
-        $item = InventoryItem::findOrFail($id);
+   
 
-        $data = $request->validate([
-            'name' => 'sometimes|string',
-            'description' => 'nullable|string',
-            'category' => 'nullable|string',
-            'quantity' => 'sometimes|integer',
-            'unit' => 'sometimes|string',
-            'price_per_unit' => 'sometimes|numeric',
-            'supplier_name' => 'sometimes|string',
-            'received_date' => 'sometimes|date',
-            'expiry_date' => 'nullable|date',
-            'low_stock_threshold' => 'sometimes|integer',
-            'photo' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240',
-        ]);
+public function update(Request $request, $id)
+{
+    $item = InventoryItem::findOrFail($id);
 
-        if ($request->hasFile('photo')) {
-            $data['photo'] = $request->file('photo')->store('photos', 'public');
-        }
+    $data = $request->validate([
+        'name' => 'sometimes|string',
+        'description' => 'nullable|string',
+        'category' => 'nullable|string',
+        'quantity' => 'sometimes|integer',
+        'unit' => 'sometimes|string',
+        'price_per_unit' => 'sometimes|numeric',
+        'supplier_name' => 'sometimes|string',
+        'received_date' => 'sometimes|date',
+        'expiry_date' => 'nullable|date',
+        'low_stock_threshold' => 'sometimes|integer',
+        'photo' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:10240',
+    ]);
 
-        $item->update($data);
-
-        // Re-check low_stock if quantity or threshold is updated
-        $quantity = $data['quantity'] ?? $item->quantity;
-        $threshold = $data['low_stock_threshold'] ?? $item->low_stock_threshold;
-        $item->low_stock = $quantity <= $threshold;
-        $item->save();
-
-
-        if ($item->low_stock) {
-
-            $firebase = (new Factory)
-                ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
-                ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com'); // ✅ <- THIS LINE
-
-            $database = $firebase->createDatabase();
-
-            $ref = $database->getReference('test_api')->push([
-                'message' => 'low stock alert for ' . $item->name,
-                'time' => now()->toDateTimeString(),
-            ]);
-        }
-
-        return response()->json($item);
+    if ($request->hasFile('photo')) {
+        $data['photo'] = $request->file('photo')->store('photos', 'public');
     }
 
+    $item->update($data);
 
-    // Subtract a quantity from the inventory item
+    $quantity = $data['quantity'] ?? $item->quantity;
+    $threshold = $data['low_stock_threshold'] ?? $item->low_stock_threshold;
+    $item->low_stock = $quantity <= $threshold;
+    $item->save();
+
+    if ($item->low_stock) {
+        $title = __('messages.low_stock_title'); 
+        $body  = __('messages.low_stock_body', ['item' => $item->name]); 
+
+        $firebase = (new Factory)
+            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'));
+
+        $messaging = $firebase->createMessaging();
+
+        foreach (
+            User::whereIn('user_role', ['owner', 'manager','inventory_manager'])
+                ->whereNotNull('fcm_token')
+                ->get() as $user
+        ) {
+            $message = CloudMessage::withTarget('token', $user->fcm_token)
+                ->withNotification(Notification::create($title, $body));
+
+            try {
+                $messaging->send($message);
+            } catch (\Kreait\Firebase\Exception\MessagingException $e) {
+                \Log::error("FCM error for user {$user->id}: " . $e->getMessage());
+            }
+        }
+    }
+
+    return response()->json([$item]);
+}
+
+
     public function subtractQuantity(Request $request, $id)
     {
         $item = InventoryItem::findOrFail($id);
@@ -133,32 +140,39 @@ class InventoryController extends Controller
             'amount' => 'required|integer|min:1',
         ]);
 
-        // Prevent negative quantity
         if ($item->quantity < $data['amount']) {
             return response()->json(['error' => 'Not enough stock to subtract that amount.'], 400);
         }
 
-        // Subtract quantity
         $item->quantity -= $data['amount'];
 
-        // Recalculate low stock
         $item->low_stock = $item->quantity <= $item->low_stock_threshold;
 
         $item->save();
 
-        if ($item->low_stock) {
+       if ($item->low_stock) {
+        $title = __('messages.low_stock_title');
+        $body  = __('messages.low_stock_body', ['item' => $item->name]); 
+        $firebase = (new Factory)
+            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'));
 
-            $firebase = (new Factory)
-                ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'))
-                ->withDatabaseUri('https://restaurent-67df3-default-rtdb.firebaseio.com');
+        $messaging = $firebase->createMessaging();
 
-            $database = $firebase->createDatabase();
+        foreach (
+            User::whereIn('user_role', ['owner', 'manager','inventory_manager'])
+                ->whereNotNull('fcm_token')
+                ->get() as $user
+        ) {
+            $message = CloudMessage::withTarget('token', $user->fcm_token)
+                ->withNotification(Notification::create($title, $body));
 
-            $ref = $database->getReference('test_api')->push([
-                'message' => 'low stock alert for ' . $item->name,
-                'time' => now()->toDateTimeString(),
-            ]);
+            try {
+                $messaging->send($message);
+            } catch (\Kreait\Firebase\Exception\MessagingException $e) {
+                \Log::error("FCM error for user {$user->id}: " . $e->getMessage());
+            }
         }
+    }
         return response()->json([
             'message' => 'Quantity subtracted successfully',
             'item' => $item
@@ -176,6 +190,31 @@ class InventoryController extends Controller
         ]);
         $item->low_stock = $request->low_stock;
         $item->save();
+
+         if ($item->low_stock) {
+        $title = __('messages.low_stock_title'); 
+        $body  = __('messages.low_stock_body', ['item' => $item->name]); 
+
+        $firebase = (new Factory)
+            ->withServiceAccount(public_path('restaurent-67df3-firebase-adminsdk-fbsvc-c42e5f0548.json'));
+
+        $messaging = $firebase->createMessaging();
+
+        foreach (
+            User::whereIn('user_role', ['owner', 'manager','inventory_manager'])
+                ->whereNotNull('fcm_token')
+                ->get() as $user
+        ) {
+            $message = CloudMessage::withTarget('token', $user->fcm_token)
+                ->withNotification(Notification::create($title, $body));
+
+            try {
+                $messaging->send($message);
+            } catch (\Kreait\Firebase\Exception\MessagingException $e) {
+                \Log::error("FCM error for user {$user->id}: " . $e->getMessage());
+            }
+        }
+    }
         return response()->json(['message' => 'Low stock updated']);
     }
 
