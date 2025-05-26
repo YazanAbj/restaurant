@@ -210,29 +210,32 @@ class ReservationController extends Controller
         ], 200);
     }
 
-    //to confirm a cancelled reservation
     public function updateStatus(Request $request, $id)
     {
-
         $request->validate([
-            'status' => 'required|string|in:confirmed',
+            'status' => 'required|string|in:confirmed,done',
         ]);
-
 
         $reservation = Reservation::findOrFail($id);
 
-        if (!$reservation) {
-            return response()->json(['message' => 'Reservation not found.'], 404);
-        }
-
-
-        if ($reservation->status === 'confirmed') {
+        if ($reservation->status === $request->status) {
             return response()->json([
-                'message' => 'Reservation is already confirmed.'
+                'message' => 'Reservation is already ' . $request->status . '.'
             ], 400);
         }
 
-        $reservation->status = $request->status;
+        $newStatus = $request->status;
+
+        if ($reservation->status === 'done' && $newStatus === 'confirmed') {
+            if (Carbon::parse($reservation->reservation_date)->isPast()) {
+                return response()->json([
+                    'message' => 'Cannot revert to confirmed. The reservation date has already passed.'
+                ], 400);
+            }
+        }
+
+        // Update status
+        $reservation->status = $newStatus;
         $reservation->save();
 
         return response()->json([

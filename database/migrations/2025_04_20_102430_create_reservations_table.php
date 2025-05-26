@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('reservations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade'); // still useful to know which manager created it
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('table_id')->constrained('tables')->onDelete('cascade');
             $table->date('reservation_date');
             $table->time('reservation_start_time');
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('guest_name');
             $table->string('guest_phone')->nullable();
             $table->text('notes')->nullable();
-            $table->enum('status', ['confirmed', 'cancelled'])->default('confirmed');
+            $table->enum('status', ['confirmed', 'done', 'cancelled'])->default('confirmed');
             $table->timestamps();
             $table->softDeletes();
         });
