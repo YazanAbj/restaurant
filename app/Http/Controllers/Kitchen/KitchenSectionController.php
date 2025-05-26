@@ -81,7 +81,7 @@ class KitchenSectionController extends Controller
             'range' => 'nullable|in:weekly,monthly,all',
         ]);
 
-        $query = OrderItem::where('kitchen_section_id', $id);
+        $query = OrderItem::with('menuItem')->where('kitchen_section_id', $id);
 
         if ($startDate && $endDate) {
             $query = $query->whereBetween('created_at', [

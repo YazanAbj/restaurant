@@ -73,7 +73,12 @@ class BillController extends Controller
 
     public function softDelete(Bill $bill)
     {
+        if ($bill->status !== 'paid') {
+            return response()->json(['message' => 'Only paid bills can be deleted.'], 403);
+        }
+
         $bill->delete();
+
         return response()->json(['message' => 'Bill soft-deleted successfully.']);
     }
 
@@ -81,10 +86,15 @@ class BillController extends Controller
     {
         $bill = Bill::withTrashed()->findOrFail($id);
 
+        if ($bill->status !== 'paid') {
+            return response()->json(['message' => 'Only paid bills can be permanently deleted.'], 403);
+        }
+
         $bill->forceDelete();
 
         return response()->json(['message' => 'Bill permanently deleted.']);
     }
+
     public function restore($id)
     {
         $bill = Bill::withTrashed()->find($id);

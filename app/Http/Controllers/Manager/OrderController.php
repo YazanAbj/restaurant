@@ -123,7 +123,11 @@ class OrderController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
+        $table = Table::where('table_number', $validated['table_number'])->whereNull('deleted_at')->first();
 
+        if (!$table) {
+            return response()->json(['error' => 'Table not found or has been deleted'], 404);
+        }
 
         $order = $this->orderService->createOrderWithItems(
             $validated['table_number'],

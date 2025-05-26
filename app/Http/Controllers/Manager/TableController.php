@@ -118,6 +118,10 @@ class TableController extends Controller
     {
         $table = Table::findOrFail($id);
 
+        if ($table->status !== 'free') {
+            return response()->json(['message' => 'You can not delete this Table, its status is not free, it might has running orders.']);
+        }
+
         $force = $request->boolean('force', false);
         $today = now()->toDateString();
 
@@ -141,6 +145,9 @@ class TableController extends Controller
     public function forceDelete(Request $request, $id)
     {
         $table = Table::withTrashed()->findOrFail($id);
+        if ($table->status !== 'free') {
+            return response()->json(['message' => 'You can not delete this Table, its status is not free, it might has running orders.']);
+        }
 
         $force = $request->boolean('force', false);
         $today = now()->toDateString();
