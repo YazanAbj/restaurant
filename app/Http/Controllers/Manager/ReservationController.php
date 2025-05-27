@@ -62,7 +62,7 @@ class ReservationController extends Controller
             'guests_number' => 'required|integer|min:1',
             'guest_name' => 'required|string|max:255',
             'guest_phone' => 'string|max:20',
-            'table_id' => 'required|integer|exists:tables,table_number',
+            'table_id' => 'required|integer|exists:tables,id',
             'notes' => 'nullable|string',
         ]);
 
@@ -94,17 +94,22 @@ class ReservationController extends Controller
             ->where('status', 'confirmed')
             ->get();
 
-        $overlapping = false;
+        $overlapping = false;;
 
         foreach ($existingReservations as $existing) {
-            $existingTime = \Carbon\Carbon::createFromFormat('H:i:s', $existing->reservation_start_time);
-            $newTime = \Carbon\Carbon::createFromFormat('H:i', $request->reservation_start_time);
+            $existingStart = Carbon::createFromFormat('Y-m-d H:i:s', $existing->reservation_date . ' ' . $existing->reservation_start_time);
+            $existingEnd = $existingStart->copy()->addHour();
 
-            if ($existingTime->diffInMinutes($newTime) < 60) {
+            $newStart = Carbon::createFromFormat('Y-m-d H:i', $request->reservation_date . ' ' . $request->reservation_start_time);
+            $newEnd = $newStart->copy()->addHour();
+
+            // Check for overlap
+            if ($newStart->lt($existingEnd) && $existingStart->lt($newEnd)) {
                 $overlapping = true;
                 break;
             }
         }
+
 
         if ($overlapping && !$request->force) {
             return response()->json([
@@ -142,7 +147,7 @@ class ReservationController extends Controller
             'guests_number' => 'required|integer|min:1',
             'guest_name' => 'required|string|max:255',
             'guest_phone' => 'string|max:20',
-            'table_id' => 'required|integer|exists:tables,table_number',
+            'table_id' => 'required|integer|exists:tables,id',
             'notes' => 'nullable|string',
         ]);
 
@@ -176,15 +181,20 @@ class ReservationController extends Controller
 
         $overlapping = false;
 
-        foreach ($existingReservations as $existing) {
-            $existingTime = \Carbon\Carbon::createFromFormat('H:i:s', $existing->reservation_start_time);
-            $newTime = \Carbon\Carbon::createFromFormat('H:i', $request->reservation_start_time);
+        $newStart = Carbon::createFromFormat('Y-m-d H:i', $request->reservation_date . ' ' . $request->reservation_start_time);
+        $newEnd = $newStart->copy()->addHour();
 
-            if ($existingTime->diffInMinutes($newTime) < 60) {
+        foreach ($existingReservations as $existing) {
+            $existingStart = Carbon::createFromFormat('Y-m-d H:i:s', $existing->reservation_date . ' ' . $existing->reservation_start_time);
+            $existingEnd = $existingStart->copy()->addHour();
+
+            // Check if the new time overlaps with existing one
+            if ($newStart->lt($existingEnd) && $existingStart->lt($newEnd)) {
                 $overlapping = true;
                 break;
             }
         }
+
 
         if ($overlapping && !$request->force) {
             return response()->json([

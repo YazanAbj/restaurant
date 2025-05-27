@@ -39,13 +39,14 @@ class BillController extends Controller
 
     public function getByTable($tableId)
     {
-        $bill = Bill::where('table_number', $tableId)
+        $bill = Bill::where('table_id', $tableId)
             ->where('status', 'open')
             ->with(['orders.items.menuItem', 'orders.user'])
             ->first();
 
         return response()->json(['bill' => $bill]);
     }
+
     public function show(Bill $bill)
     {
         $bill->load('orders.Items');

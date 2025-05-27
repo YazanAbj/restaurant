@@ -36,9 +36,9 @@ class OrderController extends Controller
         return response()->json(['items' => $items]);
     }
 
-    public function getOrdersByTableNumber($tableNumber)
+    public function getOrdersByTableNumber($tableId)
     {
-        $table = Table::where('table_number', $tableNumber)->first();
+        $table = Table::find($tableId);
 
         if (!$table) {
             return response()->json(['message' => 'Table not found.'], 404);
@@ -48,20 +48,25 @@ class OrderController extends Controller
             return response()->json(['message' => 'Table is free, no active orders.']);
         }
 
-        $bill = Bill::where('table_number', $table->table_number)->where('status', 'open')->first();
+        $bill = Bill::where('table_id', $table->id)->where('status', 'open')->first();
 
         if (!$bill) {
             return response()->json(['message' => 'No open bill found for this table.']);
         }
 
-        $orders = $bill->orders()->with('items.menuItem')->get();
+        $orders = $bill->orders()
+            ->where('is_canceled', false)
+            ->with('items.menuItem')
+            ->get();
 
         return response()->json([
-            'table' => $table->table_number,
+            'table_id' => $table->id,
             'bill_id' => $bill->id,
             'orders' => $orders,
         ]);
     }
+
+
 
     public function filterOrdersByBillStatus(Request $request)
     {
@@ -110,7 +115,7 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'table_number' => 'required|integer|exists:tables,table_number',
+            'table_id' => 'required|integer|exists:tables,id',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -123,14 +128,14 @@ class OrderController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        $table = Table::where('table_number', $validated['table_number'])->whereNull('deleted_at')->first();
+        $table = Table::find($validated['table_id']);
 
         if (!$table) {
             return response()->json(['error' => 'Table not found or has been deleted'], 404);
         }
 
         $order = $this->orderService->createOrderWithItems(
-            $validated['table_number'],
+            $validated['table_id'],
             $validated['items'],
             $user
         );

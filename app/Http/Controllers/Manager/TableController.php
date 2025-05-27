@@ -122,6 +122,15 @@ class TableController extends Controller
             return response()->json(['message' => 'You can not delete this Table, its status is not free, it might has running orders.']);
         }
 
+        $hasOpenBill = $table->bills()
+            ->where('status', 'open')
+            ->exists();
+
+        if ($hasOpenBill) {
+            return response()->json([
+                'message' => 'You cannot delete this table; it has an open bill.',
+            ], 409);
+        }
         $force = $request->boolean('force', false);
         $today = now()->toDateString();
 

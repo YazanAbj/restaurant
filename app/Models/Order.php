@@ -14,13 +14,18 @@ class Order extends Model
 
     protected $dates = ['deleted_at'];
     protected $fillable = [
-        'table_number',
+        'table_id',
         'total_price',
         'bill_id',
         'has_been_served',
         'is_canceled',
         'user_id',
     ];
+
+    public function table()
+    {
+        return $this->belongsTo(Table::class);
+    }
 
     public function bill()
     {

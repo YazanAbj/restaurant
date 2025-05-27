@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('bills', function (Blueprint $table) {
             $table->id();
-            $table->string('table_number');
+            $table->foreignId('table_id')->constrained('tables')->onDelete('cascade');
             $table->decimal('total', 10, 2)->default(0);
             $table->enum('discount_type', ['percentage', 'fixed'])->nullable(); // Discount type
             $table->decimal('discount_value', 10, 2)->nullable();               // Value of discount

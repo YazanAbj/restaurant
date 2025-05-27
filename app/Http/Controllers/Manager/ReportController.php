@@ -40,13 +40,17 @@ class ReportController extends Controller
         $userId = $request->input('user_id');
         $category = $request->input('category');
 
+        // Validation - add kitchen_section filter
         $request->validate([
             'start_date' => 'nullable|date_format:Y-m-d',
             'end_date' => 'nullable|date_format:Y-m-d',
             'user_id' => 'nullable|exists:users,id',
             'category' => 'nullable|string|max:100',
+            'kitchen_section' => 'nullable|string|max:100',  // new
             'range' => 'nullable|in:daily,weekly,monthly',
         ]);
+
+        $kitchenSectionFilter = $request->input('kitchen_section');
 
         $query = Order::withTrashed()
             ->where('is_canceled', false)
@@ -56,10 +60,15 @@ class ReportController extends Controller
         if ($userId) {
             $query->where('user_id', $userId);
         }
+
         $orders = $query->with([
             'items' => function ($q) {
                 $q->withTrashed();
+                $q->with(['kitchenSection' => function ($q) {
+                    $q->withTrashed();
+                }]);
             },
+
             'items.menuItem' => function ($q) {
                 $q->withTrashed();
             },
@@ -77,9 +86,29 @@ class ReportController extends Controller
         $waiterBreakdown = [];
         $categoryBreakdown = [];
         $dailyBreakdown = [];
+        $kitchenSectionBreakdown = [];
 
         $orderItemCount = 0;
         $totalQuantityHandled = 0;
+
+
+        $allKitchenSections = KitchenSection::withTrashed()->get();
+
+        $allKitchenSections = \App\Models\KitchenSection::withTrashed()->get();
+
+        foreach ($allKitchenSections as $section) {
+            $name = $section->name;
+
+            if ($kitchenSectionFilter && $name !== $kitchenSectionFilter) {
+                continue;
+            }
+
+            $kitchenSectionBreakdown[$name] = [
+                'kitchen_section' => $name,
+                'total_sales' => 0,
+            ];
+        }
+
 
         foreach ($orders as $order) {
             foreach ($order->items as $item) {
@@ -88,8 +117,17 @@ class ReportController extends Controller
                 }
 
                 $menuItem = $item->menuItem;
+                if (!$menuItem) continue;
 
-                if ($category && $menuItem && $menuItem->category !== $category) {
+                // Filter by category if set
+                if ($category && $menuItem->category !== $category) {
+                    continue;
+                }
+
+                $kitchenSection = $item->kitchenSection;
+
+                // Filter by kitchen section if set
+                if ($kitchenSectionFilter && (!$kitchenSection || $kitchenSection->name !== $kitchenSectionFilter)) {
                     continue;
                 }
 
@@ -130,10 +168,22 @@ class ReportController extends Controller
                     ];
                 }
                 $dailyBreakdown[$orderDate]['total_sales'] += $price;
+
+                if ($kitchenSection) {
+                    $kName = $kitchenSection->name;
+                    if (!isset($kitchenSectionBreakdown[$kName])) {
+                        $kitchenSectionBreakdown[$kName] = [
+                            'kitchen_section' => $kName,
+                            'total_sales' => 0,
+                        ];
+                    }
+                    $kitchenSectionBreakdown[$kName]['total_sales'] += $price;
+                }
             }
 
-            $waiter = $order->user;
 
+            // Waiter breakdown (unchanged)
+            $waiter = $order->user;
             if (!$waiter) continue;
 
             $waiterId = $waiter->id;
@@ -144,7 +194,6 @@ class ReportController extends Controller
                     'total_sales' => 0,
                 ];
             }
-
             $waiterBreakdown[$waiterId]['total_sales'] += $order->total_price;
         }
 
@@ -158,6 +207,7 @@ class ReportController extends Controller
             'waiters' => array_values($waiterBreakdown),
             'categories' => array_values($categoryBreakdown),
             'daily_sales' => array_values($dailyBreakdown),
+            'kitchen_sections' => array_values($kitchenSectionBreakdown),
         ]);
     }
 
@@ -398,7 +448,7 @@ class ReportController extends Controller
 
             return [
                 'bill_id' => $bill->id,
-                'table_number' => $bill->table_number,
+                'table_id' => $bill->table_id,
                 'final_price' => $bill->final_price,
                 'orders_count' => $validOrders->count(),
                 'items_count' => $validOrders->flatMap->items->count(),
@@ -451,9 +501,9 @@ class ReportController extends Controller
             'range' => 'nullable|in:daily,weekly,monthly,incoming_week,tomorrow',
         ]);
 
-        $tables = Table::withTrashed() // ✅ Include soft-deleted tables
+        $tables = Table::withTrashed()
             ->with(['reservations' => function ($query) use ($startDate, $endDate) {
-                $query->withTrashed() // ✅ Include soft-deleted reservations
+                $query->withTrashed()
                     ->whereBetween('reservation_date', [$startDate, $endDate]);
             }])->get();
 
@@ -461,24 +511,35 @@ class ReportController extends Controller
             $reservations = $table->reservations;
 
             $confirmedReservations = $reservations->where('status', 'confirmed');
+            $doneReservations = $reservations->where('status', 'done');
             $cancelledReservations = $reservations->where('status', 'cancelled');
 
             $totalConfirmed = $confirmedReservations->count();
-            $totalGuests = $confirmedReservations->sum('guests_number');
+            $totalDone = $doneReservations->count();
             $capacity = $table->capacity;
 
-            $occupancyRate = $totalConfirmed > 0
-                ? round(($totalGuests / ($capacity * $totalConfirmed)) * 100, 2)
+            $confirmedGuests = $confirmedReservations->sum('guests_number');
+            $doneGuests = $doneReservations->sum('guests_number');
+
+            $confirmedOccupancy = $totalConfirmed > 0
+                ? round(($confirmedGuests / ($capacity * $totalConfirmed)) * 100, 2)
+                : 0;
+
+            $doneOccupancy = $totalDone > 0
+                ? round(($doneGuests / ($capacity * $totalDone)) * 100, 2)
                 : 0;
 
             return [
-                'table_number' => $table->table_number,
+                'table_id' => $table->id,
                 'capacity' => $capacity,
                 'total_reservations' => $reservations->count(),
                 'confirmed_reservations' => $totalConfirmed,
+                'done_reservations' => $totalDone,
                 'cancelled_reservations' => $cancelledReservations->count(),
-                'total_guests' => $totalGuests,
-                'occupancy_rate_percent' => $occupancyRate,
+                'confirmed_guests' => $confirmedGuests,
+                'done_guests' => $doneGuests,
+                'confirmed_occupancy_percent' => $confirmedOccupancy,
+                'done_occupancy_percent' => $doneOccupancy,
             ];
         });
 

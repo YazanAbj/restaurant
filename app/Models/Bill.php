@@ -13,7 +13,7 @@ class Bill extends Model
 
     protected $dates = ['deleted_at'];
     protected $fillable = [
-        'table_number',
+        'table_id',
         'total',
         'discount_type',
         'discount_value',
@@ -26,7 +26,10 @@ class Bill extends Model
     {
         return $this->hasMany(Order::class);
     }
-
+    public function table()
+    {
+        return $this->belongsTo(Table::class);
+    }
     public function user()
     {
         return $this->belongsTo(User::class);

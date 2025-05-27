@@ -14,7 +14,7 @@ class OrderItem extends Model
     protected $dates = ['deleted_at'];
     protected $fillable = [
         'order_id',
-        'table_number',
+        'table_id',
         'menu_item_id',
         'quantity',
         'status',
@@ -23,6 +23,11 @@ class OrderItem extends Model
         'notes'
     ];
 
+
+    public function table()
+    {
+        return $this->belongsTo(Table::class);
+    }
     public function order()
     {
         return $this->belongsTo(Order::class);

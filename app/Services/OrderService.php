@@ -50,15 +50,15 @@ class OrderService
     }
 
 
-    public function createOrderWithItems($tableNumber, $items, $user)
+    public function createOrderWithItems($tableId, $items, $user)
     {
-        return DB::transaction(function () use ($tableNumber, $items, $user) {
-            $table = Table::where('table_number', $tableNumber)->first();
+        return DB::transaction(function () use ($tableId, $items, $user) {
+            $table = Table::find($tableId);
             if ($table && $table->status !== 'occupied') {
                 $table->update(['status' => 'occupied']);
             }
 
-            $bill = Bill::where('table_number', $tableNumber)
+            $bill = Bill::where('table_id', $tableId)
                 ->where('status', 'open')
                 ->first();
 
@@ -66,7 +66,7 @@ class OrderService
 
             if (!$bill) {
                 $bill = Bill::create([
-                    'table_number' => $tableNumber,
+                    'table_id' => $tableId,
                     'status' => 'open',
                     'total' => 0,
                     'final_price' => 0,
@@ -74,7 +74,7 @@ class OrderService
             }
 
             $order = $bill->orders()->create([
-                'table_number' => $tableNumber,
+                'table_id' => $tableId,
                 'user_id' => $user->id,
             ]);
 
@@ -87,7 +87,7 @@ class OrderService
                 $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
 
                 $order->items()->create([
-                    'table_number' => $tableNumber,
+                    'table_id' => $tableId,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
                     'price' => $total,
@@ -120,7 +120,6 @@ class OrderService
                 ->where('has_been_served', false)
                 ->exists();
 
-
             if ($unservedOrders) {
                 return [
                     'success' => false,
@@ -136,8 +135,8 @@ class OrderService
             ]);
 
             $firstOrder = $bill->orders->first();
-            if ($firstOrder && $firstOrder->table_number) {
-                Table::where('table_number', $firstOrder->table_number)->update(['status' => 'free']);
+            if ($firstOrder && $firstOrder->table_id) {
+                Table::where('id', $firstOrder->table_id)->update(['status' => 'free']);
             }
 
             return [
@@ -146,6 +145,7 @@ class OrderService
             ];
         });
     }
+
 
     public function updateOrder($orderId, $items, $user)
     {
@@ -157,7 +157,7 @@ class OrderService
                 abort(409, "You can't update this order because it has items that are not pending.");
             }
 
-            $order->items()->delete();
+            $order->items()->forcedelete();
 
             $totalOrderPrice = 0;
 
@@ -170,7 +170,7 @@ class OrderService
                 $kitchenSection = KitchenSection::whereJsonContains('categories', $menuItem->category)->first();
 
                 $order->items()->create([
-                    'table_number' => $order->table_number,
+                    'table_id' => $order->table_id,
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
                     'price' => $total,
@@ -192,6 +192,7 @@ class OrderService
             return $order->load(['items.menuItem', 'user']);
         });
     }
+
 
     public function updateOrderItem($orderItemId, $newMenuItemId, $newQuantity, $newNotes = null, $force = false)
     {
@@ -310,27 +311,6 @@ class OrderService
             $bill->update(['total' => $billTotal, 'final_price' => $billTotal]);
 
             return $orderItem->fresh();
-        });
-    }
-
-    public function deleteOrderItem($orderItemId)
-    {
-        return DB::transaction(function () use ($orderItemId) {
-            $orderItem = OrderItem::find($orderItemId);
-
-            if (!$orderItem) {
-                abort(404, 'Order item not found.');
-            }
-
-            $order = $orderItem->order;
-
-            if ($order->bill && $order->bill->status !== 'paid') {
-                throw new \Exception('Cannot delete item unless the bill is paid.', 403);
-            }
-
-            $orderItem->delete();
-
-            return true;
         });
     }
 }
