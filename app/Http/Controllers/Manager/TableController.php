@@ -28,10 +28,9 @@ class TableController extends Controller
         ]);
     }
 
-
-    public function show($tableNumber)
+    public function show($tableId)
     {
-        $table = Table::where('table_number', $tableNumber)->firstOrFail();
+        $table = Table::findOrFail($tableId);
 
         return response()->json(['table' => $table]);
     }
@@ -39,16 +38,8 @@ class TableController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'table_number' => 'required|string',
             'capacity' => 'required|integer|min:1',
         ]);
-
-
-        if (Table::where('table_number', $validated['table_number'])->exists()) {
-            return response()->json([
-                'message' => 'Table with this number already exists.'
-            ], 409);
-        }
 
         $table = Table::create($validated);
 
@@ -59,9 +50,9 @@ class TableController extends Controller
     }
 
 
-    public function update(Request $request, $tableNumber)
+    public function update(Request $request, $tableId)
     {
-        $table = Table::where('table_number', $tableNumber)->firstOrFail();
+        $table = Table::findOrFail($tableId);
 
         $validated = $request->validate([
             'capacity' => 'sometimes|required|integer|min:1',
@@ -93,13 +84,14 @@ class TableController extends Controller
     }
 
 
-    public function updateStatus(Request $request, $tableNumber)
+
+    public function updateStatus(Request $request, $tableId)
     {
         $request->validate([
             'status' => 'required|in:free,occupied',
         ]);
 
-        $table = Table::where('table_number', $tableNumber)->first();
+        $table = Table::find($tableId);
 
         if (!$table) {
             return response()->json(['message' => 'Table not found.'], 404);
@@ -113,6 +105,7 @@ class TableController extends Controller
             'data' => $table
         ]);
     }
+
 
     public function softDelete(Request $request, $id)
     {
