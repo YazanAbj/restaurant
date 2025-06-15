@@ -12,7 +12,7 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $authUser = auth()->user(); // make sure this route is protected by auth:sanctum middleware
+        $authUser = auth()->user();
 
         if (!in_array($authUser->user_role, ['owner', 'manager'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
@@ -214,17 +214,17 @@ class AuthController extends Controller
         return false;
     }
 
-    
+
     public function updateFcmToken(Request $request)
     {
-    $request->validate([
-        'fcm_token' => 'required|string',
-    ]);
+        $request->validate([
+            'fcm_token' => 'required|string',
+        ]);
 
-    $user = $request->user();
-    $user->fcm_token = $request->fcm_token;
-    $user->save();
+        $user = $request->user();
+        $user->fcm_token = $request->fcm_token;
+        $user->save();
 
-    return response()->json(['message' => 'FCM token updated successfully.']);
+        return response()->json(['message' => 'FCM token updated successfully.']);
     }
 }

@@ -49,7 +49,7 @@ class BillController extends Controller
 
     public function show(Bill $bill)
     {
-        $bill->load('orders.Items');
+        $bill->load('orders.items');
         return response()->json($bill);
     }
 
