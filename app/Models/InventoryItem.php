@@ -10,6 +10,7 @@ class InventoryItem extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'name',
         'description',
         'category',
@@ -24,4 +25,10 @@ class InventoryItem extends Model
         'photo',
 
     ];
+
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

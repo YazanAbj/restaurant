@@ -12,6 +12,7 @@ class InventoryItemSeeder extends Seeder
     {
         DB::table('inventory_items')->insert([
             [
+                'user_id' => 1,
                 'name' => 'Tomato',
                 'description' => 'Fresh red tomatoes',
                 'category' => 'Vegetable',
@@ -27,6 +28,8 @@ class InventoryItemSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'user_id' => 1,
+
                 'name' => 'Chicken Breast',
                 'description' => 'Boneless skinless chicken breasts',
                 'category' => 'Meat',
@@ -42,6 +45,8 @@ class InventoryItemSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'user_id' => 1,
+
                 'name' => 'Olive Oil',
                 'description' => 'Extra virgin olive oil',
                 'category' => 'Condiment',
@@ -57,6 +62,8 @@ class InventoryItemSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'user_id' => 1,
+
                 'name' => 'Rice',
                 'description' => 'Long-grain basmati rice',
                 'category' => 'Grain',

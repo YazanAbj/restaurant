@@ -17,9 +17,9 @@ class DatabaseSeeder extends Seeder
             KitchenSectionSeeder::class,
             TableSeeder::class,
             ReservationSeeder::class,
+            OwnerSeeder::class,
             InventoryItemSeeder::class,
             MenuItemSeeder::class,
-            OwnerSeeder::class,
         ]);
     }
 }
