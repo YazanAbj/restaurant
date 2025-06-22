@@ -66,7 +66,6 @@ class ReservationController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-
         $reservationDateTime = Carbon::createFromFormat('Y-m-d H:i', $request->reservation_date . ' ' . $request->reservation_start_time);
 
         if ($reservationDateTime->isPast()) {
@@ -75,12 +74,7 @@ class ReservationController extends Controller
             ], 400);
         }
 
-
         $table = Table::findOrFail($request->table_id);
-
-        if (!$table) {
-            return response()->json(['message' => 'Table not found.'], 404);
-        }
 
         if ($request->guests_number > $table->capacity) {
             return response()->json([
@@ -88,13 +82,23 @@ class ReservationController extends Controller
             ], 400);
         }
 
+        if (Reservation::hasThreeConsecutiveCancellations($request->guest_phone) && !$request->force_cancellation_warning) {
+            return response()->json([
+                'message' => 'Warning: This guest has canceled their last 3 reservations. Do you want to proceed?',
+                'requires_confirmation' => true,
+                'reason' => 'cancellation_warning',
+                'data' => $request->all()
+            ], 409);
+        }
 
+
+        // ✅ Check for overlapping reservations
         $existingReservations = Reservation::where('table_id', $request->table_id)
             ->where('reservation_date', $request->reservation_date)
             ->where('status', 'confirmed')
             ->get();
 
-        $overlapping = false;;
+        $overlapping = false;
 
         foreach ($existingReservations as $existing) {
             $existingStart = Carbon::createFromFormat('Y-m-d H:i:s', $existing->reservation_date . ' ' . $existing->reservation_start_time);
@@ -103,18 +107,17 @@ class ReservationController extends Controller
             $newStart = Carbon::createFromFormat('Y-m-d H:i', $request->reservation_date . ' ' . $request->reservation_start_time);
             $newEnd = $newStart->copy()->addHour();
 
-            // Check for overlap
             if ($newStart->lt($existingEnd) && $existingStart->lt($newEnd)) {
                 $overlapping = true;
                 break;
             }
         }
 
-
-        if ($overlapping && !$request->force) {
+        if ($overlapping && !$request->force_time_conflict) {
             return response()->json([
                 'message' => 'Warning: Another reservation is close to this time (less than 1 hour). Are you sure you want to continue?',
                 'requires_confirmation' => true,
+                'reason' => 'time_conflict',
                 'data' => $request->all()
             ], 409);
         }
@@ -136,6 +139,7 @@ class ReservationController extends Controller
             'reservation' => $reservation
         ], 201);
     }
+
 
     public function update(Request $request, $id)
     {
@@ -159,12 +163,7 @@ class ReservationController extends Controller
             ], 400);
         }
 
-
         $table = Table::findOrFail($request->table_id);
-        if (!$table) {
-            return response()->json(['message' => 'Table not found.'], 404);
-        }
-
 
         if ($request->guests_number > $table->capacity) {
             return response()->json([
@@ -172,7 +171,17 @@ class ReservationController extends Controller
             ], 400);
         }
 
+        // ✅ Check for 3 consecutive cancellations
+        if (Reservation::hasThreeConsecutiveCancellations($request->guest_phone) && !$request->force_cancellation_warning) {
+            return response()->json([
+                'message' => 'Warning: This guest has canceled their last 3 reservations. Do you want to proceed?',
+                'requires_confirmation' => true,
+                'reason' => 'cancellation_warning',
+                'data' => $request->all()
+            ], 409);
+        }
 
+        // ✅ Check for overlapping reservations
         $existingReservations = Reservation::where('table_id', $request->table_id)
             ->where('reservation_date', $request->reservation_date)
             ->where('status', 'confirmed')
@@ -188,18 +197,17 @@ class ReservationController extends Controller
             $existingStart = Carbon::createFromFormat('Y-m-d H:i:s', $existing->reservation_date . ' ' . $existing->reservation_start_time);
             $existingEnd = $existingStart->copy()->addHour();
 
-            // Check if the new time overlaps with existing one
             if ($newStart->lt($existingEnd) && $existingStart->lt($newEnd)) {
                 $overlapping = true;
                 break;
             }
         }
 
-
-        if ($overlapping && !$request->force) {
+        if ($overlapping && !$request->force_time_conflict) {
             return response()->json([
                 'message' => 'Warning: Another reservation is close to this time (less than 1 hour). Are you sure you want to continue?',
                 'requires_confirmation' => true,
+                'reason' => 'time_conflict',
                 'data' => $request->all()
             ], 409);
         }

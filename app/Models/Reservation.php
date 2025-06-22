@@ -49,4 +49,15 @@ class Reservation extends Model
     {
         return $this->belongsTo(Table::class);
     }
+
+    public static function hasThreeConsecutiveCancellations($phone)
+    {
+        $statuses = self::where('guest_phone', $phone)
+            ->orderBy('reservation_date', 'desc')
+            ->orderBy('reservation_start_time', 'desc')
+            ->limit(3)
+            ->pluck('status');
+
+        return $statuses->count() === 3 && $statuses->every(fn($s) => $s === 'cancelled');
+    }
 }
